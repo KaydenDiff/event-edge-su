@@ -121,84 +121,7 @@
 
       <!-- Tournament Bracket Section -->
       <div v-if="pageContent === 'tournament-basket'">
-        <div class="tournament-container">
-          <h2 class="title">Турнирная сетка</h2>
-          <label for="tournamentFilter">Выберите турнир</label>
-<select v-model="selectedTournament">
-  <option :value="null">Все турниры</option>
-  <option v-for="tournament in tournaments" :key="tournament.id" :value="tournament.id">
-    {{ tournament.name }}
-  </option>
-</select>
-          <!-- Отображение стадий турнира -->
-          <div v-if="!stages.length" class="no-stages-message">
-            <p>Нет стадий для этого турнира.</p>
-          </div>
-
-          <div v-else class="bracket">
-            <div 
-              v-for="(stage, stageIndex) in stages" 
-              :key="'stage-' + stageIndex" 
-              class="stage-container"
-            >
-              <h3 class="stage-title">{{ stage.name }}</h3>
-
-              <!-- Отображение матчей для каждой стадии -->
-              <div v-if="!rounds[stageIndex] || rounds[stageIndex].length === 0" class="no-matches-message">
-                <p>Нет матчей для этой стадии.</p>
-              </div>
-
-              <div v-else class="rounds-container">
-                <div 
-                  v-for="(round, roundIndex) in rounds[stageIndex]" 
-                  :key="'round-' + roundIndex" 
-                  class="round"
-                >
-                  <div 
-                    v-for="(match, matchIndex) in round" 
-                    :key="'match-' + matchIndex" 
-                    class="match-container"
-                  >
-                    <div class="match">
-                      <div 
-                        class="team" 
-                        :class="{ winner: match.winner === match.team1 }" 
-                        @click="selectWinner(stageIndex, roundIndex, matchIndex, match.team1)"
-                        :disabled="!!match.winner"
-                      >
-                        {{ getTeamName(match.team1) }}
-                      </div>
-                      <div 
-                        class="team" 
-                        :class="{ winner: match.winner === match.team2 }" 
-                        @click="selectWinner(stageIndex, roundIndex, matchIndex, match.team2)"
-                        :disabled="!!match.winner"
-                      >
-                        {{ getTeamName(match.team2) }}
-                      </div>
-                      <!-- Кнопка для редактирования матча -->
-                      <button 
-                        v-if="isAdmin"
-                        @click="editMatch(stageIndex, roundIndex, matchIndex)"
-                        class="edit-button"
-                      >
-                        Редактировать
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Чемпион -->
-            <div v-if="rounds.length > 0 && rounds[rounds.length - 1][0]?.winner" class="champion-container">
-              <h3 class="champion-title">Чемпион</h3>
-              <div class="champion">
-                {{ getTeamName(rounds[rounds.length - 1][0].winner) }}
-              </div>
-            </div>
-          </div>
-        </div>
+<TournamentBasketAdmin></TournamentBasketAdmin>
       </div>
 
     </div>
@@ -208,6 +131,7 @@
 <script>
 import AdminSidebar from '../components/AdminSidebar.vue';
 import TournamentCard from '../components/TournamentCard.vue';
+import TournamentBasketAdmin from '../components/TournamentBasketAdmin.vue';
 import MatchCard from '@/components/MatchCard.vue';
 import { ref } from 'vue';
 import axios from 'axios';
@@ -217,7 +141,8 @@ export default {
   components: {
     AdminSidebar,
     TournamentCard,
-    MatchCard
+    MatchCard,
+    TournamentBasketAdmin
   },
   data() {
     return {
