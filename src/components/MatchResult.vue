@@ -119,6 +119,7 @@
           winner_team_id: this.winnerTeamId,
           status: this.status,
         };
+        console.log('winnerTeamId:', this.winnerTeamId, typeof this.winnerTeamId);
   
         try {
           const response = await fetch(`http://event-edge-su/api/admin/game-matches/update/${this.matchId}`, {

@@ -1,62 +1,38 @@
 <template>
   <div class="tournament-container">
-    <h2 class="title">Турнирная сетка (Single Elimination)</h2>
-    
-    <!-- Проверка наличия матчей -->
-    <div v-if="!rounds.length" class="no-matches-message">
-      <p>Нет матчей еще для этого турнира.</p>
-    </div>
+    <h2 class="title">
+      Турнирная сетка ({{ bracketType }}) - {{ selectedTournamentName || "Загрузка..." }}
+    </h2>
 
-    <!-- Если матчи есть, показываем сетку -->
-    <div v-else class="bracket">
-      <div 
-        v-for="(round, roundIndex) in rounds" 
-        :key="'round-' + roundIndex" 
-        class="round"
-      >
-        <div 
-          v-for="(match, matchIndex) in round" 
-          :key="'match-' + matchIndex" 
-          class="match-container"
-        >
+    <h3 class="round-title" :class="{ 'active-stage': stageIndex === currentStageIndex }">
+      {{ currentStageName || 'Неизвестная стадия' }}
+    </h3>
+
+    <!-- Турнирная сетка -->
+    <div v-if="stages.length" class="bracket">
+      <div v-for="(stage, stageIndex) in stages" :key="'stage-' + stageIndex" class="round">
+        <h3 class="round-title">{{ getStageName(stageIndex) }}</h3>
+        <div v-for="(match, matchIndex) in stage.matches" :key="'match-' + matchIndex" class="match-container">
           <div class="match">
-            <div 
-              class="team" 
-              :class="{ winner: match.winner === match.team1 }" 
-              @click="selectWinner(roundIndex, matchIndex, match.team1)" 
-              :disabled="!!match.winner"
-            >
+            <div class="team" :class="{ winner: match.winner_team === match.team1 }">
               {{ getTeamName(match.team1) }}
             </div>
-            <div 
-              class="team" 
-              :class="{ winner: match.winner === match.team2 }" 
-              @click="selectWinner(roundIndex, matchIndex, match.team2)" 
-              :disabled="!!match.winner"
-            >
+
+            <div class="vs">VS</div>
+
+            <div class="team" :class="{ winner: match.winner_team === match.team2 }">
               {{ getTeamName(match.team2) }}
             </div>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- Отображение чемпиона -->
-    <div v-if="rounds.length > 0 && rounds[rounds.length - 1][0]?.winner" class="champion-container">
-      <h3 class="champion-title">Чемпион</h3>
-      <div class="champion">
-        {{ getTeamName(rounds[rounds.length - 1][0].winner) }}
-      </div>
-    </div>
   </div>
 </template>
-
 <script>
-import { defineComponent, ref, onMounted } from 'vue';
-import axios from 'axios';
+import axios from "axios";
 
-export default defineComponent({
-  name: "TournamentBracket",
+export default {
   props: {
     tournamentId: {
       type: Number,
@@ -65,113 +41,121 @@ export default defineComponent({
   },
   data() {
     return {
-      teams: [], // Список команд с их названиями и ID
-      rounds: [], // Сетка турнира
-      champion: null
+      stages: [],
+      selectedTournamentName: "",
+      bracketType: "Single Elimination",
+      stageIndex: null,
+      currentStageIndex: 0,
+      currentStageName: "",
+      selectedTournamentId: null,
+      currentStageId: null
     };
   },
   async mounted() {
-    try {
-      await this.fetchTeams(); // Загружаем команды с сервера
-      await this.fetchParticipants(); // Загружаем данные для турнира
-    } catch (error) {
-      console.error('Ошибка при загрузке данных:', error);
+    if (this.tournamentId) {
+      this.selectedTournamentId = this.tournamentId;
+      await this.fetchTournamentData();
+      await this.fetchBracket();
     }
   },
   methods: {
-    async fetchTeams() {
+    async fetchTournamentData() {
       try {
-        const response = await axios.get('http://event-edge-su/api/guest/teams');
-        if (Array.isArray(response.data)) {
-          this.teams = response.data;
-        } else {
-          console.error("Ответ от сервера не является массивом.");
-        }
-      } catch (error) {
-        console.error('Ошибка загрузки команд:', error);
-      }
-    },
+        const response = await axios.get(`http://event-edge-su/api/guest/tournaments/${this.selectedTournamentId}`);
+        const tournament = response.data;
+        this.selectedTournamentName = tournament.name;
+        const currentStage = tournament.stage;
 
-    async fetchParticipants() {
-      try {
-        const response = await axios.get(`http://event-edge-su/api/guest/tournaments/${this.tournamentId}/basket`);
+        if (currentStage) {
+          this.currentStageId = currentStage.id;
+          this.currentStageName = currentStage.name;
+          this.currentStageIndex = tournament.currentStageIndex;
+        } else {
+          console.log("Стадия не найдена для турнира.");
+        }
+
+        this.stageIndex = tournament.currentStageIndex;
         
-        if (Array.isArray(response.data)) {
-          const gameMatches = response.data.map(item => item.game_match);
-
-          if (gameMatches.length > 0) {
-            this.rounds = this.generateBracketFromMatches(gameMatches);
-          } else {
-            console.log("Нет матчей для турнира.");
-            this.rounds = []; // Устанавливаем пустую сетку, чтобы отобразить сообщение
-          }
-        } else {
-          console.error("Ответ от сервера не является массивом.");
-        }
       } catch (error) {
-        console.error('Ошибка загрузки участников:', error);
+        console.error("Ошибка при загрузке данных турнира", error);
       }
     },
+    async fetchBracket() {
+      if (!this.selectedTournamentId) return;
+      try {
+        const response = await axios.get(`http://event-edge-su/api/guest/tournaments/${this.selectedTournamentId}/basket`);
+        this.stages = this.createBracket(response.data);
+      } catch (error) {
+        console.error("Ошибка загрузки сетки:", error);
+      }
+    },
+    createBracket(matches) {
+      const stagesMap = {};
+      const stageIdSet = new Set();
 
-    generateBracketFromMatches(gameMatches) {
-      let rounds = [];
-      let currentRound = [];
-      gameMatches.forEach((match, index) => {
-        if (index % 2 === 0 && currentRound.length > 0) {
-          rounds.push(currentRound);
-          currentRound = []; // Новый раунд
+      matches.forEach(match => {
+        const stageId = match.game_match.stage_id;
+        stageIdSet.add(stageId);
+        if (!stagesMap[stageId]) {
+          stagesMap[stageId] = [];
         }
-        currentRound.push({
-          team1: match.team_1_id, 
-          team2: match.team_2_id, 
-          winner: match.winner_team_id || null
+
+        stagesMap[stageId].push({
+          match_id: match.game_match.id,
+          team1: match.team_a,
+          team2: match.team_b,
+          winner_team: match.winner_team,
         });
       });
-      if (currentRound.length > 0) {
-        rounds.push(currentRound); // Добавляем последний раунд
-      }
-      return rounds;
-    },
 
-    // Получаем название команды по ID
-    getTeamName(teamId) {
-      const team = this.teams.find(t => t.id === teamId);
-      return team ? team.name : `Команда ${teamId}`;
-    },
+      const sortedStageIds = [...stageIdSet].sort((a, b) => a - b);
+      const stagesArray = sortedStageIds.map(stage_id => ({
+        stage_id,
+        matches: stagesMap[stage_id],
+      }));
 
-    selectWinner(roundIndex, matchIndex, team) {
-      const selectedMatch = this.rounds[roundIndex][matchIndex];
-      if (selectedMatch.winner || !selectedMatch.team1 || !selectedMatch.team2) {
-        return; // Если уже есть победитель, или матч неполный, не даём изменить результат
-      }
+      const initialStage = stagesArray[0];
+      const initialTeamCount = initialStage?.matches.length * 2 || 0;
 
-      selectedMatch.winner = team;
-      this.updateBracket(roundIndex, matchIndex);
-    },
+      const totalStages = Math.ceil(Math.log2(initialTeamCount));
 
-    updateBracket(roundIndex, matchIndex) {
-      const selectedMatch = this.rounds[roundIndex][matchIndex];
+      while (stagesArray.length < totalStages) {
+        const prevStage = stagesArray[stagesArray.length - 1];
+        const winners = prevStage.matches.map(m => m.winner_team);
 
-      if (roundIndex < this.rounds.length - 1) {
-        let nextRoundIndex = roundIndex + 1;
-        let nextRound = this.rounds[nextRoundIndex];
-        const nextMatchIndex = Math.floor(matchIndex / 2);
-        
-        if (!nextRound[nextMatchIndex]) {
-          nextRound[nextMatchIndex] = { team1: null, team2: null, winner: null };
+        const newMatches = [];
+        for (let i = 0; i < Math.ceil(winners.length / 2); i++) {
+          const team1 = winners[i * 2] || null;
+          const team2 = winners[i * 2 + 1] || null;
+
+          newMatches.push({
+            team1: team1 ?? 'TBE',
+            team2: team2 ?? 'TBE',
+            winner_team: null,
+          });
         }
 
-        if (matchIndex % 2 === 0) {
-          nextRound[nextMatchIndex].team1 = selectedMatch.winner;
-        } else {
-          nextRound[nextMatchIndex].team2 = selectedMatch.winner;
-        }
-      } else if (roundIndex === this.rounds.length - 1 && selectedMatch.winner) {
-        this.champion = selectedMatch.winner;
+        stagesArray.push({
+          stage_id: stagesArray.length + 1,
+          matches: newMatches,
+        });
       }
-    }
-  }
-});
+
+      return stagesArray;
+    },
+    getTeamName(teamName) {
+      return teamName || "TBE";
+    },
+    getStageName(stageIndex) {
+      if (stageIndex === this.currentStageIndex) {
+        return this.currentStageName || 'Неизвестная стадия';
+      }
+
+      const stageNames = [ "1/8", "1/4", "Полуфинал", "Финал"];
+      return stageNames[stageIndex] || `Стадия ${stageIndex}`;
+    },
+  },
+};
 </script>
 
 <style scoped>
@@ -179,45 +163,81 @@ export default defineComponent({
   margin-top: 100px;
   padding: 30px 20px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #000000; /* Серый фон */
 }
 
 .title {
   font-size: 2.5rem;
   font-weight: bold;
-  color: #ffffff; /* Темно-золотой */
+  color: #ffffff;
   text-align: center;
   margin-bottom: 40px;
 }
 
-.no-matches-message {
-  text-align: center;
-  font-size: 1.5rem;
-  color: #e74c3c;
+.tournament-selector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.search-container {
+  position: relative;
+  width: 80%;
+  max-width: 400px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background-color: #333;
+  color: white;
+}
+
+.suggestions {
+  position: absolute;
+  width: 100%;
+  background-color: #444;
+  border: 1px solid #ccc;
+  border-top: none;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.suggestions li {
+  padding: 10px;
+  cursor: pointer;
+  color: white;
+}
+
+.suggestions li:hover {
+  background-color: #630181;
+  color: black;
+}
+
+.add-match-btn {
+  background-color: #630181;
+  color: black;
   font-weight: bold;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  display: block;
+  margin: 20px auto;
 }
 
-.bracket {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 40px;
-  flex: 1;
-}
-
-.round {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.match {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.match-container {
+  margin-bottom: 20px;
 }
 
 .team {
+  margin: 10px auto;
   padding: 10px 15px;
   background-color: #6d6d6d;
   color: white;
@@ -226,38 +246,38 @@ export default defineComponent({
   min-width: 150px;
   text-align: center;
   cursor: pointer;
-  transition: background 0.3s;
-}
-
-.team:hover {
-  background-color: #5F665E;
 }
 
 .winner {
-  background-color: #f5c116 !important;
-}
-
-.match-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  position: relative;
-  min-height: 70px;
-}
-
-.champion-title {
-  font-size: 1.5em;
-  font-weight: bold;
-  color: #ffffff;
-  margin-bottom: 10px;
+  background-color: #630181 !important;
 }
 
 .champion {
   font-size: 2em;
   font-weight: bold;
   color: #ffffff;
-  padding: 10px;
-  border-radius: 8px;
-  background-color: #6e6e6e;
+}
+
+.bracket {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+.round {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.round-title {
+  color: white;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 10px;
 }
 </style>
+

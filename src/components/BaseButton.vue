@@ -1,5 +1,16 @@
 <template>
+  <!-- Если href задан, рендерим ссылку, иначе кнопку -->
+  <a 
+    v-if="href"
+    :href="href"
+    :target="target"
+    :class="['base-button', customClass]"
+    class="base-button"
+  >
+    <slot></slot>
+  </a>
   <button 
+    v-else
     :class="['base-button', customClass]" 
     @click="handleClick"
   >
@@ -15,6 +26,14 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  href: {
+    type: String,
+    required: false,  // href теперь необязателен
+  },
+  target: {
+    type: String,
+    default: "_self", // если target не указан, открываем ссылку в текущем окне
+  },
   to: {
     type: [String, Object],
     required: false,  // Путь теперь необязателен
@@ -26,7 +45,6 @@ const router = useRouter();
 const handleClick = () => {
   if (props.to) {
     router.push(props.to);  // Если путь указан, переходим по нему
-  } else {
   }
 };
 </script>
@@ -39,7 +57,7 @@ const handleClick = () => {
   text-align: center;
   font-family: inherit;
   cursor: pointer;
-  background-color: #ffffff;
+  background: #ffffff;
   color: #000;
   padding: 12px 24px;
   border-radius: 8px;
@@ -73,7 +91,7 @@ const handleClick = () => {
 .base-button:hover {
   animation: pulseBorder 1.5s infinite ease-in-out;
   transform: scale(1.05);
-  background-color: #000;
+  background: #630181;
   color: #fff;
 }
 

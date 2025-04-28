@@ -14,20 +14,27 @@
 
       <div class="form-group">
         <label for="startDate">Дата начала:</label>
-        <input type="datetime-local" id="startDate" v-model="tournament.startDate" class="input-field"  @input="handleInput"/>
+        <input 
+          type="datetime-local" 
+          id="startDate" 
+          v-model="tournament.startDate" 
+          class="input-field"  
+          @input="handleInput"
+          step="60"
+        />
       </div>
 
       <div class="form-group">
         <label for="endDate">Дата окончания:</label>
-        <input type="datetime-local" id="endDate" v-model="tournament.endDate" class="input-field" @input="handleInput" />
+        <input 
+          type="datetime-local" 
+          id="endDate" 
+          v-model="tournament.endDate" 
+          class="input-field" 
+          @input="handleInput" 
+          step="60"
+        />
       </div>
-
-      <div class="form-group">
-        <label for="organizer">Организатор:</label>
-        <input type="text" id="organizer" v-model="organizerName" class="input-field" @input="handleInput" />
-        <input type="hidden" v-model="organizerId" />
-      </div>
-
       <!-- Выпадающий список для выбора игры -->
       <div class="form-group">
         <label for="game">Игра:</label>
@@ -44,10 +51,6 @@
         </select>
       </div>
 
-      <div class="form-group">
-        <label for="viewsCount">Количество просмотров:</label>
-        <input type="number" id="viewsCount" v-model="tournament.viewsCount" class="input-field"  @input="handleInput"/>
-      </div>
       <div class="form-group">
   <label for="image">Изображение:</label>
   <input type="file" id="image" @change="handleFileUpload" />
@@ -133,12 +136,20 @@ export default {
           throw new Error('Ошибка загрузки турнира');
         }
         const data = await response.json();
+        
+        // Форматируем даты, убирая секунды
+        const formatDateTime = (dateTimeStr) => {
+          if (!dateTimeStr) return '';
+          const date = new Date(dateTimeStr);
+          return date.toISOString().slice(0, 16); // Убираем секунды
+        };
+
         this.tournament = {
           id: data.id,
           name: data.name,
           description: data.description,
-          startDate: data.start_date,
-          endDate: data.end_date,
+          startDate: formatDateTime(data.start_date),
+          endDate: formatDateTime(data.end_date),
           viewsCount: data.views_count
         };
         this.organizerId = data.organizer.id;
@@ -172,55 +183,62 @@ export default {
       }
     },
     async updateTournament() {
-  let updatedFields = new FormData(); // Создаем объект FormData
+      let updatedFields = new FormData();
 
-  // Добавляем текстовые данные
-  updatedFields.append('name', this.tournament.name);
-  updatedFields.append('description', this.tournament.description);
-  updatedFields.append('start_date', this.tournament.startDate);
-  updatedFields.append('end_date', this.tournament.endDate);
-  updatedFields.append('views_count', this.tournament.viewsCount);
-  updatedFields.append('user_id', this.organizerId);
-  updatedFields.append('game_id', this.gameId);
-  updatedFields.append('stage_id', this.stageId);
+      // Добавляем только измененные текстовые поля
+      if (this.tournament.name !== this.originalTournament.name) {
+        updatedFields.append('name', this.tournament.name);
+      }
+      if (this.tournament.description !== this.originalTournament.description) {
+        updatedFields.append('description', this.tournament.description);
+      }
+      if (this.tournament.startDate !== this.originalTournament.startDate) {
+        updatedFields.append('start_date', this.tournament.startDate);
+      }
+      if (this.tournament.endDate !== this.originalTournament.endDate) {
+        updatedFields.append('end_date', this.tournament.endDate);
+      }
+      
+      // Добавляем обязательные поля
+      updatedFields.append('views_count', this.tournament.viewsCount);
+      updatedFields.append('user_id', this.organizerId);
+      updatedFields.append('game_id', this.gameId);
+      updatedFields.append('stage_id', this.stageId);
 
-  // Добавляем изображение, если оно было загружено
-  if (this.imageFile) {
-    updatedFields.append('image', this.imageFile);
-  }
+      // Добавляем изображение только если оно было выбрано
+      if (this.imageFile) {
+        updatedFields.append('image', this.imageFile);
+      }
 
-  // Получаем токен пользователя
-  const user = JSON.parse(localStorage.getItem('user'));
-  if (!user || !user.token) {
-    console.error("❌ Ошибка: токен не найден!");
-    alert("Ошибка: вы не авторизованы");
-    return;
-  }
+      const user = JSON.parse(localStorage.getItem('user'));
+      if (!user || !user.token) {
+        console.error("❌ Ошибка: токен не найден!");
+        alert("Ошибка: вы не авторизованы");
+        return;
+      }
 
-  try {
-    const response = await fetch(`http://event-edge-su/api/admin/tournaments/update/${this.tournament.id}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${user.token}`
-      },
-      body: updatedFields // Отправляем FormData без 'Content-Type', так как браузер установит его автоматически
-    });
+      try {
+        const response = await fetch(`http://event-edge-su/api/admin/tournaments/update/${this.tournament.id}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${user.token}`
+          },
+          body: updatedFields
+        });
 
-    const responseData = await response.json();
+        if (!response.ok) {
+          const responseData = await response.json();
+          console.error("❌ Ошибка при обновлении:", responseData);
+          throw new Error(responseData.message || 'Ошибка при обновлении');
+        }
 
-    console.log("Ответ от сервера:", responseData);
-
-    if (!response.ok) {
-      console.error("❌ Ошибка при обновлении:", responseData);
-      throw new Error(responseData.message || 'Ошибка при обновлении');
+        const responseData = await response.json();
+        alert('Турнир успешно обновлен!');
+        this.$router.push('/admin');
+      } catch (error) {
+        alert(`Ошибка при обновлении турнира: ${error.message}`);
+      }
     }
-
-    alert('Турнир успешно обновлен!');
-    this.$router.push('/admin');
-  } catch (error) {
-    console.error('❌ Ошибка обновления турнира:', error);
-  }
-}
   }
 };
 </script>
@@ -299,7 +317,6 @@ textarea {
 .btn-submit:hover {
   animation: pulseBorder 1.5s infinite ease-in-out;
   transform: scale(1.05);
-  background-color: #000000;
   color: #ffffff;
 }
 

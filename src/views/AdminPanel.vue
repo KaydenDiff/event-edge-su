@@ -1,138 +1,158 @@
 <template>
   <div class="admin-panel">
-    <AdminSidebar @menu-selected="updateContent" />
+    <div v-if="!isAdmin">
+        <p>У вас нет доступа к этой странице.</p>
+      </div>
     <div class="main-content">
       <h2>{{ pageTitle }}</h2>
       
       <!-- Home Section -->
-      <div v-if="pageContent === 'home'">
-        <h3>Как пользоваться панелью администратора</h3>
-        <p>
-          Здесь вы можете управлять различными аспектами системы, включая турниры, матчи, статистику и настройки.
-        </p>
-        <ul>
-          <li>Управление пользователями: Добавляйте, редактируйте и удаляйте пользователей.</li>
-          <li>Управление турнирами: Добавляйте и редактируйте турниры.</li>
-          <li>Управление матчами: Создавайте и управляйте матчами.</li>
-          <li>Статистика: Просматривайте различные данные и отчеты.</li>
-          <li>Настройки: Изменяйте настройки приложения.</li>
-        </ul>
-      </div>
+      <div v-if="pageContent === 'home'" class="admin-guide">
+        <div class="welcome-section">
+          <h3>Добро пожаловать в панель администратора</h3>
+          <p class="welcome-text">
+            Здесь вы можете управлять всеми аспектами турнирной системы. Ниже представлено подробное руководство по каждому разделу.
+          </p>
+        </div>
 
-      <!-- Tournaments Section -->
-      <div v-if="pageContent === 'tournaments'">
-        <p>
-          Здесь вы можете добавлять, редактировать и удалять турниры.
-        </p>
-        <div v-if="!tournaments || tournaments.length === 0">Нет турниров</div>
-        <div v-else>
-          <div v-for="tournament in tournaments" :key="tournament.id" class="tournament-card">
-            <TournamentCard :tournament="tournament" />
-            <div class="tournament-actions">
-              <!-- Перенаправление на страницу редактирования -->
-              <button @click="editTournament(tournament.id)">Редактировать</button>
-              <button @click="deleteTournament(tournament.id)">Удалить</button>
+        <div class="guide-sections">
+          <div class="guide-section">
+            <h4><i class="fas fa-users"></i> Управление пользователями</h4>
+            <div class="section-content">
+              <p>В этом разделе вы можете:</p>
+              <ul>
+                <li>Просматривать список всех зарегистрированных пользователей</li>
+                <li>Редактировать профили пользователей</li>
+                <li>Управлять правами доступа</li>
+                <li>Блокировать нарушителей правил</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="guide-section">
+            <h4><i class="fas fa-trophy"></i> Управление турнирами</h4>
+            <div class="section-content">
+              <p>Возможности раздела:</p>
+              <ul>
+                <li>Создание новых турниров</li>
+                <li>Редактирование существующих турниров</li>
+                <li>Управление статусами турниров</li>
+                <li>Настройка правил и форматов</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="guide-section">
+            <h4><i class="fas fa-gamepad"></i> Управление матчами</h4>
+            <div class="section-content">
+              <p>В этом разделе доступно:</p>
+              <ul>
+                <li>Создание и редактирование матчей</li>
+                <li>Обновление результатов</li>
+                <li>Управление расписанием</li>
+                <li>Модерация конфликтных ситуаций</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="guide-section">
+            <h4><i class="fas fa-chart-bar"></i> Статистика</h4>
+            <div class="section-content">
+              <p>Раздел предоставляет:</p>
+              <ul>
+                <li>Аналитику по турнирам и матчам</li>
+                <li>Статистику активности пользователей</li>
+                <li>Отчеты по проведенным мероприятиям</li>
+                <li>Графики и диаграммы</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="guide-section">
+            <h4><i class="fas fa-sitemap"></i> Турнирные сетки</h4>
+            <div class="section-content">
+              <p>Здесь вы можете:</p>
+              <ul>
+                <li>Создавать турнирные сетки</li>
+                <li>Настраивать форматы проведения</li>
+                <li>Управлять стадиями турнира</li>
+                <li>Автоматизировать процесс жеребьёвки</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="guide-section">
+            <h4><i class="fas fa-bell"></i> Уведомления</h4>
+            <div class="section-content">
+              <p>Возможности раздела:</p>
+              <ul>
+                <li>Отправка системных уведомлений</li>
+                <li>Массовая рассылка важных сообщений</li>
+                <li>Настройка автоматических уведомлений</li>
+                <li>Просмотр истории отправленных сообщений</li>
+              </ul>
             </div>
           </div>
         </div>
+
+        <div class="admin-tips">
+          <h4><i class="fas fa-lightbulb"></i> Полезные советы</h4>
+          <ul>
+            <li>Регулярно проверяйте раздел уведомлений для своевременной реакции на запросы пользователей</li>
+            <li>Используйте фильтры в каждом разделе для быстрого поиска нужной информации</li>
+            <li>При возникновении спорных ситуаций обращайтесь к логам системы</li>
+            <li>Создавайте резервные копии важных данных перед внесением существенных изменений</li>
+          </ul>
+        </div>
       </div>
+
+      <!-- Users Section -->
+      <UsersSection 
+        v-if="pageContent === 'users'" 
+        :is-admin="isAdmin"
+      />
+
+      <!-- Tournaments Section -->
+      <TournamentsSection 
+        v-if="pageContent === 'tournaments'" 
+        :is-admin="isAdmin"
+        @edit-tournament="editTournament"
+      />
 
       <!-- Matches Section -->
       <div v-if="pageContent === 'matches'">
-        <button class="btn-primary" @click="showCreateMatchForm = !showCreateMatchForm">
-          {{ showCreateMatchForm ? 'Закрыть форму' : 'Создать матч' }}
-        </button>
-
-        <!-- Форма создания матча -->
-        <div v-if="showCreateMatchForm">
-          <h4>Создание нового матча</h4>
-          <form @submit.prevent="createMatch">
-            <div>
-              <label for="tournament_id">Турнир</label>
-              <select v-model="newMatch.tournament_id" required>
-                <option v-for="tournament in tournaments" :key="tournament.id" :value="tournament.id">
-                  {{ tournament.name }}
-                </option>
-              </select>
-            </div>
-            <div>
-              <label for="team1">Команда 1</label>
-              <select v-model="newMatch.team_1_id" required>
-                <option v-for="team in filteredTeams" :key="team.id" :value="team.id">
-                  {{ team.name }}
-                </option>
-              </select>
-            </div>
-            <div>
-              <label for="team2">Команда 2</label>
-              <select v-model="newMatch.team_2_id" required>
-                <option v-for="team in filteredTeams" :key="team.id" :value="team.id">
-                  {{ team.name }}
-                </option>
-              </select>
-            </div>
-            <div>
-              <label for="match_date">Дата и время</label>
-              <input type="datetime-local" v-model="newMatch.match_date" required />
-            </div>
-            <div>
-              <label for="status">Статус</label>
-              <select v-model="newMatch.status" required>
-                <option value="pending">Ожидает</option>
-                <option value="completed">Завершен</option>
-                <option value="cancelled">Отменен</option>
-              </select>
-            </div>
-            <div>
-              <label for="stage_id">Стадия</label>
-              <select v-model="newMatch.stage_id" required>
-                <option v-for="stage in stages" :key="stage.id" :value="stage.id">
-                  {{ stage.name }}
-                </option>
-              </select>
-            </div>
-            <div>
-              <label for="winner_team_id">Победившая команда</label>
-              <select v-model="newMatch.winner_team_id">
-                <option :value="null">Без победителя</option>
-                <option v-if="newMatch.team_1_id" :value="newMatch.team_1_id">
-                  {{ teams.find(team => team.id === newMatch.team_1_id)?.name }}
-                </option>
-                <option v-if="newMatch.team_2_id" :value="newMatch.team_2_id">
-                  {{ teams.find(team => team.id === newMatch.team_2_id)?.name }}
-                </option>
-              </select>
-            </div>
-            <button type="submit" class="btn-primary">Создать матч</button>
-          </form>
-        </div>
-
-        <div v-if="!matches || matches.length === 0">Нет матчей</div>
-        <div v-else>
-          <div v-for="match in matches" :key="match.id" class="match-card">
-            <MatchCard :match="match" />
-            <div class="match-actions">
-              <button @click="editMatch(match.id)">Редактировать</button>
-              <button @click="deleteMatch(match.id)">Удалить</button>
-            </div>
-          </div>
-        </div>
+        <MatchSection />
       </div>
 
       <!-- Tournament Bracket Section -->
       <div v-if="pageContent === 'tournament-basket'">
-<TournamentBasketAdmin></TournamentBasketAdmin>
+        <TournamentBasketAdmin></TournamentBasketAdmin>
       </div>
 
+      <!-- Statistics Section -->
+      <div v-if="pageContent === 'statistics'">
+        <StatsChart></StatsChart>
+      </div>
+
+      <!-- Notification Section -->
+      <div v-if="pageContent === 'notifications'">
+        <NotificationSection />
+      </div>
     </div>
-  </div>
+    </div>
 </template>
 
 <script>
-import AdminSidebar from '../components/AdminSidebar.vue';
-import TournamentCard from '../components/TournamentCard.vue';
-import TournamentBasketAdmin from '../components/TournamentBasketAdmin.vue';
+import AdminSidebar from '@/components/AdminSidebar.vue';
+import TournamentCard from '@/components/TournamentCard.vue';
+import TournamentBasketAdmin from '@/components/TournamentBasketAdmin.vue';
 import MatchCard from '@/components/MatchCard.vue';
+import BaseButton from '@/components/BaseButton.vue';
+import StatsChart from '@/components/StatsChart.vue';
+import MatchSection from '@/components/sections/MatchSection.vue';
+import TournamentsSection from '@/components/sections/TournamentsSection.vue';
+import UsersSection from '@/components/sections/UsersSection.vue';
+import NotificationSection from '@/components/sections/NotificationSection.vue';
 import { ref } from 'vue';
 import axios from 'axios';
 
@@ -140,30 +160,42 @@ export default {
   name: 'AdminPanel',
   components: {
     AdminSidebar,
+    StatsChart,
     TournamentCard,
+    BaseButton,
+    MatchSection,
     MatchCard,
-    TournamentBasketAdmin
+    TournamentBasketAdmin,
+    TournamentsSection,
+    UsersSection,
+    NotificationSection
+  },
+  props: {
+    selectedMenu: {
+      type: String,
+      default: 'home'
+    }
   },
   data() {
     return {
       pageContent: 'home',
+      pageTitle: '', 
       tournaments: [], 
       teams: [],
-      stages: [],
-      rounds: [], // Хранение данных о матчах по раундам
-      matches: [],
       showCreateMatchForm: false,
-      newMatch: {
-        tournament_id: '',
-        team_1_id: '',
-        team_2_id: '',
-        match_date: '',
-        status: 'pending',
-        winner_team_id: '',
-        stage_id: ''
-      },
-      isAdmin: true // Определяем, является ли пользователь администратором
+      stages: [],
+      rounds: [],
+      isAdmin: true
     };
+  },
+  watch: {
+    selectedMenu: {
+      immediate: true,
+      handler(newValue) {
+        this.pageContent = newValue;
+        this.updateContent(newValue);
+      }
+    }
   },
   computed: {
     filteredTeams() {
@@ -198,7 +230,13 @@ export default {
       this.pageTitle = 'Управление матчами';
     } else if (section === 'tournament-basket') {
       this.pageTitle = 'Управление турнирными сетками';
-    }
+    } else if (section === 'statistics') {
+      this.pageTitle = 'Просмотр статистики';
+    } else if (section === 'users') {
+      this.pageTitle = 'Управление пользователями';
+    } else if (section === 'notifications') {
+      this.pageTitle = 'Управление уведомлениями';
+    } 
   },
 
     async fetchTournaments() {
@@ -262,133 +300,20 @@ export default {
         console.error('Ошибка загрузки стадий:', error);
       }
     },
-
-    async fetchMatches() {
-      try {
-        const response = await fetch('http://event-edge-su/api/guest/game-matches');
-        const data = await response.json();
-        this.matches = data;
-      } catch (error) {
-        console.error('Ошибка загрузки матчей:', error);
-      }
-    },
-
-    async createMatch() {
-      const user = JSON.parse(localStorage.getItem('user'));
-      if (!user || !user.token) {
-        console.error('Токен не найден');
-        return;
-      }
-
-      console.log('Отправляемые данные для создания матча:', this.newMatch);
-
-      try {
-        const response = await fetch('http://event-edge-su/api/admin/game-matches/create', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${user.token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(this.newMatch),
-        });
-
-        if (!response.ok) {
-          throw new Error('Ошибка при создании матча');
-        }
-
-        this.newMatch = {
-          tournament_id: '',
-          team_1_id: '',
-          team_2_id: '',
-          match_date: '',
-          status: 'pending',
-          winner_team_id: '',
-          stage_id: ''
-        };
-        this.showCreateMatchForm = false;
-
-        await this.fetchMatches();
-      } catch (error) {
-        console.error('Ошибка создания матча:', error);
-      }
-    },
-
-    async deleteMatch(id) {
-      if (!confirm('Вы уверены, что хотите удалить матч?')) return;
-
-      const user = JSON.parse(localStorage.getItem('user'));
-      if (!user || !user.token) {
-        console.error('Токен не найден');
-        return;
-      }
-
-      try {
-        const response = await fetch(`http://event-edge-su/api/admin/game-matches/delete/${id}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${user.token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error('Ошибка при удалении матча');
-        }
-
-        this.matches = this.matches.filter(match => match.id !== id);
-      } catch (error) {
-        console.error('Ошибка удаления матча:', error);
-      }
-    },
-
-    async editMatch(id) {
-      this.$router.push({ name: 'EditMatch', params: { id } });
-    }
   },
   mounted() {
     this.fetchTeams?.();
     this.fetchStages?.();
-    this.fetchMatches?.();
     this.fetchTournaments?.();
   }
 };
 </script>
 
 <style scoped>
-button {
-  background-color: #ffffff;
-  color: #000;
-  padding: 8px 20px;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: bold;
-  transition: all 0.3s ease-in-out;
-  outline: none;
-  border: 3px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  position: relative;
-  overflow: hidden;
-  z-index: 1;
-  text-decoration: none;
-  display: inline-block;
-}
 .btn-primary {
-  background-color: #ffffff;
-  color: #000;
   padding: 8px 20px;
   border-radius: 8px;
-  font-size: 16px;
-  font-weight: bold;
-  transition: all 0.3s ease-in-out;
-  outline: none;
-  border: 3px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  position: relative;
-  overflow: hidden;
-  margin: 10px auto;
-  z-index: 1;
   text-decoration: none;
-
   display: inline-block;
 }
 
@@ -405,17 +330,6 @@ button {
   }
 }
 
-/* Применение эффекта */
-button:hover {
-  animation: pulseBorder 1.5s infinite ease-in-out;
-  transform: scale(1.05);
-  background-color: #000;
-  color: #fff;
-}
-
-button:active {
-  transform: scale(0.95);
-}
 .admin-panel {
   display: flex;
   height: 100vh;
@@ -445,8 +359,6 @@ button:active {
 .main-content::-webkit-scrollbar {
   display: none; /* Скрывает скроллбар */
 }
-
-
 
 .tournament-list {
   padding-top: 20px;
@@ -504,7 +416,7 @@ button:active {
 .details-link {
   display: inline-block;
   margin-top: 10px;
-  background-color: #CDAA51;
+  background-color: #630181;
   color: white;
   padding: 8px 16px;
   border-radius: 8px;
@@ -553,17 +465,6 @@ button:active {
   font-size: 12px;
   margin-left: 10px;
 }
-.match-form {
-  background-color: #8f8f8f; /* Легкий фон для формы */
-  border-radius: 10px;
-  padding: 20px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Легкая тень */
-  margin-bottom: 30px;
-}
-
-.form-group {
-  margin-bottom: 15px;
-}
 
 label {
   font-size: 1rem;
@@ -595,36 +496,11 @@ button:active {
   transform: scale(0.95);
 }
 
-.match-actions {
-  display: flex;
-  gap: 15px;
-  justify-content: center;
-  margin-top: 20px;
-}
-
-.match-card {
-  background: #9c9c9c;
-  padding: 20px;
-  border-radius: 15px;
-  text-align: center;
-  width: 100%;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
-}
-
-
-
 .warning-text {
   color: red;
   font-size: 0.875rem;
   margin-top: 10px;
 }
-
-
-.match-container {
-  position: relative;
-}
-
 .edit-button {
   position: absolute;
   top: 0;
@@ -638,7 +514,134 @@ button:active {
 }
 
 .edit-button:hover {
-  background-color: #e67e22;
+  background-color: #ffffff;
 }
 
+.admin-guide {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.welcome-section {
+  text-align: center;
+  margin-bottom: 40px;
+  padding: 20px;
+  background: rgba(13, 13, 13, 1);
+  border-radius: 10px;
+}
+
+.welcome-text {
+  font-size: 1.1rem;
+  color: #ffffff;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.guide-sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 25px;
+  margin-bottom: 40px;
+}
+
+.guide-section {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 25px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.guide-section:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.guide-section h4 {
+  color: #630181;
+  font-size: 1.3rem;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.guide-section i {
+  font-size: 1.4rem;
+}
+
+.section-content {
+  color: #ffffff;
+}
+
+.section-content p {
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+
+.section-content ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.section-content li {
+  margin-bottom: 8px;
+  padding-left: 20px;
+  position: relative;
+}
+
+.section-content li::before {
+  content: "•";
+  color: #630181;
+  position: absolute;
+  left: 0;
+}
+
+.admin-tips {
+  background: rgba(182, 0, 254, 0.1);
+  border-radius: 10px;
+  padding: 25px;
+  margin-top: 30px;
+}
+
+.admin-tips h4 {
+  color: #630181;
+  font-size: 1.3rem;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-tips ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.admin-tips li {
+  margin-bottom: 10px;
+  padding-left: 25px;
+  position: relative;
+  color: #ffffff;
+}
+
+.admin-tips li::before {
+  content: "💡";
+  position: absolute;
+  left: 0;
+}
+
+@media (max-width: 768px) {
+  .guide-sections {
+    grid-template-columns: 1fr;
+  }
+  
+  .guide-section {
+    padding: 20px;
+  }
+  
+  .welcome-section {
+    padding: 15px;
+  }
+}
 </style>

@@ -23,14 +23,13 @@
         :class="{ selected: selectedMenu === 'statistics' }"
       >Статистика</li>
       <li 
-        @click="selectMenu('settings')" 
-        :class="{ selected: selectedMenu === 'settings' }"
-      >Настройки</li>
-
-      <li 
         @click="selectMenu('tournament-basket')" 
         :class="{ selected: selectedMenu === 'tournament-basket' }"
       >Турнирные сетки</li>
+      <li 
+        @click="selectMenu('notifications')" 
+        :class="{ selected: selectedMenu === 'notifications' }"
+      >Уведомления</li>
     </ul>
   </div>
 </template>
@@ -59,7 +58,6 @@ export default {
   left: 0;
   width: 250px;
   height: 100%; /* Занимает всю высоту экрана */
-  background-color: #000000;
   color: rgb(255, 255, 255);
   padding: 20px;
 }

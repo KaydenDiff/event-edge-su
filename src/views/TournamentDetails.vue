@@ -20,19 +20,23 @@
       <!-- Передаем ID турнира в TournamentBracket -->
       <TournamentBracket :tournamentId="tournament.id" />
       <div class="status-message">
-        <BaseButton v-if="isUpcoming" :to="'/registertournament'" customClass="details-button">
-          Регистрация
-        </BaseButton>
+    <BaseButton 
+      v-if="isUpcoming" 
+      @click="registerForTournament"
+      customClass="details-button"
+    >
+      Регистрация
+    </BaseButton>
 
-        <p v-else-if="isFinished" class="tournament-ended">Турнир завершён</p>
-      </div>
+    <p v-else-if="isFinished" class="tournament-ended">Турнир завершён</p>
+  </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import TournamentBracket from "@/components/TournamentBracket.vue"; 
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
 import BaseButton from "@/components/BaseButton.vue";
@@ -51,9 +55,9 @@ const formatDate = (date) => {
   return new Date(date).toLocaleString("ru-RU");
 };
 
-const fetchTournamentDetails = async () => {
+const fetchTournamentDetails = async (tournamentId) => {
   try {
-    const response = await axios.get(`http://event-edge-su/api/guest/tournaments/${route.params.id}`);
+    const response = await axios.get(`http://event-edge-su/api/guest/tournaments/${tournamentId}`);
     tournament.value = response.data;
   } catch (err) {
     error.value = "Ошибка загрузки данных. Попробуйте позже.";
@@ -63,10 +67,30 @@ const fetchTournamentDetails = async () => {
 };
 
 const registerForTournament = () => {
-  router.push("/registertournament");
-};
+  router.push({
+    name: 'RegisterTournament',
+    params: { 
+      tournamentId: tournament.value.id,
+      tournamentName: tournament.value.name 
+    }
+  });
+}
 
-onMounted(fetchTournamentDetails);
+onMounted(async () => {
+  const tournamentId = route.params.id;
+  await fetchTournamentDetails(tournamentId);
+});
+
+watch(
+  () => route.params.id,
+  (newId) => {
+    if (newId) {
+      fetchTournamentDetails(newId);
+    }
+  },
+  { immediate: true }
+);
+
 </script>
 
 <style scoped>
@@ -147,7 +171,6 @@ onMounted(fetchTournamentDetails);
 }
 
 .register-button:hover {
-  background-color: #000000;
   transform: scale(1.05);
   color: #ffffff;
 }
@@ -159,16 +182,10 @@ onMounted(fetchTournamentDetails);
 }
 
 .details-button {
-  background-color: #fff;
-  color: #000;
   padding: 8px 20px;
   border-radius: 8px;
   text-decoration: none;
   display: inline-block;
 }
 
-.details-button:hover {
-  background-color: #000;
-  color: #fff;
-}
 </style>

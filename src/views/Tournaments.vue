@@ -1,497 +1,472 @@
 <template>
-  <section class="tournaments">
-    <h2 class="text-3xl font-bold text-center mb-8">Все турниры</h2>
-
-    <div class="filter-buttons-container">
-  <BaseButton @click="toggleFilterVisibility" class="details-button">
-    Фильтрация
-  </BaseButton>
-
-  <BaseButton @click="resetFilters" class="details-button reset-button">
-    Сбросить фильтры
-  </BaseButton>
-</div>
-
-   <div v-if="showSearch" class="search-container">
-  <input 
-    type="text" 
-    v-model="searchQuery" 
-    @input="fetchGameSuggestions"
-    placeholder="Введите название игры..."
-    class="search-input"
-  >
-
-  <ul v-if="gameSuggestions.length > 0" class="suggestions">
-    <li 
-      v-for="game in gameSuggestions" 
-      :key="game.id" 
-      @click="selectGame(game.name)"
-      v-html="game.highlightedName"
-    ></li>
-  </ul>
-</div>
-
-    <div v-if="loading" class="loading">Загрузка...</div>
-    <div v-if="error" class="error">{{ error }}</div>
-
-    <div v-if="!loading && !error" class="tournament-list">
-      <div 
-        v-for="tournament in filteredTournaments" 
-        :key="tournament.id" 
-        class="tournament-card"
-      >
-        <div class="tournament-image-wrapper">
-          <img :src="getImageUrl(tournament.image)" alt="Изображение турнира" class="tournament-img">
+  <div class="home">
+    <div class="main-content">
+      <header class="main-header">
+        <div class="header-left">
+          <h1>Турниры</h1>
+          <div class="game-selector" v-if="selectedGames.length">
+            <div class="selected-games">
+              <span v-for="game in selectedGames" :key="game" class="selected-game">
+                {{ game }}
+                <button class="clear-game" @click="removeGame(game)">
+                  <i class="fas fa-times"></i>
+                </button>
+              </span>
+            </div>
+            <button class="clear-all" @click="clearGames" v-if="selectedGames.length > 1">
+              Очистить все
+            </button>
+          </div>
         </div>
-        <div class="tournament-info">
-          <h3 class="tournament-name">{{ tournament.name }}</h3>
-          <p class="game-name">Игра: {{ tournament.game.name }}</p>
-          <p class="organizer-name">Организатор: {{ tournament.organizer.name }}</p>
-          <p class="status">Статус: {{ tournament.status_name }}</p>
-          <p class="description">{{ tournament.description }}</p>
-          <BaseButton :to="'/tournaments/' + tournament.id" customClass="details-button">
-            Подробнее
-          </BaseButton>
+      </header>
+
+      <div class="tournament-tabs">
+        <button 
+          v-for="tab in tabs" 
+          :key="tab.id"
+          :class="['tab-button', { active: activeTab === tab.id }]"
+          @click="activeTab = tab.id"
+        >
+          {{ tab.name }}
+        </button>
+      </div>
+
+      <div class="tournaments-grid">
+        <div v-for="tournament in filteredTournaments" :key="tournament.id" class="tournament-card" @click="navigateToTournament(tournament)">
+          <div class="tournament-image-block">
+            <img :src="tournament.image" alt="tournament image" class="tournament-image" />
+          </div>
+          <div class="tournament-content">
+            <h3 class="tournament-name">{{ tournament.name }}</h3>
+            <div class="tournament-status">
+              <span class="status-label">{{ tournament.status_name }}</span>
+            </div>
+            <p class="tournament-description">{{ tournament.description }}</p>
+            <div class="tournament-info">
+              <div class="info-item">
+                <i class="fas fa-calendar"></i>
+                <span>{{ formatDate(tournament.start_date) }} - {{ formatDate(tournament.end_date) }}</span>
+              </div>
+              <div class="info-item">
+                <i class="fas fa-gamepad"></i>
+                <span>Игра: {{ tournament.game?.name }}</span>
+              </div>
+              <div class="info-item">
+                <i class="fas fa-user"></i>
+                <span>Организатор: {{ tournament.organizer?.name }}</span>
+              </div>
+              <div class="info-item" v-if="activeTab === 'current' && tournament.stage">
+                <i class="fas fa-flag-checkered"></i>
+                <span>Стадия: {{ tournament.stage.name }}</span>
+              </div>
+              <div class="info-item" v-if="activeTab === 'past'">
+                <i class="fas fa-trophy"></i>
+                <span>Победитель: {{ tournament.winner ? tournament.winner.name : '—' }}</span>
+              </div>
+            </div>
+            <button 
+              v-if="activeTab !== 'past'" 
+              class="register-button"
+              @click.stop="$router.push(`/register-tournament/${tournament.id}/${tournament.name}`)"
+            >
+              Регистрация
+            </button>
+          </div>
         </div>
       </div>
     </div>
-  </section>
+  </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
-import { useTournaments } from '@/api/methods/composables/useTournaments';
-import BaseButton from "@/components/BaseButton.vue";
-import axios from "axios";
+import { ref, computed, onMounted, watch, inject } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
-const { tournaments, loading, error } = useTournaments();
-const searchQuery = ref(""); // Поисковый запрос
-const gameSuggestions = ref([]); // Подсказки для игр
-const selectedGame = ref(""); // Выбранная игра
-const showActiveOnly = ref(false);
-const showSearch = ref(false); // Видимость строки поиска
+const route = useRoute()
+const router = useRouter()
+const tournaments = ref([])
+const selectedGames = inject('selectedGames')
+const activeTab = ref('current')
 
-// Функция переключения видимости поиска
-const toggleFilterVisibility = () => {
-  showSearch.value = !showSearch.value;
-};
+// Получаем ссылки на общие данные из App.vue
+const games = inject('games')
 
-// Сброс фильтров
-const resetFilters = () => {
-  searchQuery.value = "";
-  selectedGame.value = "";
-  showActiveOnly.value = false;
-  gameSuggestions.value = [];
-};
-
-// Функция получения подсказок для игр
-const fetchGameSuggestions = async () => {
-  if (searchQuery.value.length < 2) {
-    gameSuggestions.value = [];
-    return;
-  }
-
-  try {
-    const response = await axios.get(`http://event-edge-su/api/guest/games`);
-    
-    const query = searchQuery.value.toLowerCase();
-    gameSuggestions.value = response.data
-      .filter(game => game.name.toLowerCase().includes(query))
-      .map(game => ({
-        ...game,
-        highlightedName: highlightMatch(game.name, query),
-      }));
-  } catch (err) {
-    console.error("Ошибка загрузки игр:", err);
-  }
-};
-
-// Подсветка совпадений
-const highlightMatch = (name, query) => {
-  const regex = new RegExp(`(${query})`, "gi");
-  return name.replace(regex, '<span class="highlighted">$1</span>');
-};
-
-// Выбор игры из списка
-const selectGame = (gameName) => {
-  selectedGame.value = gameName;
-  searchQuery.value = gameName;
-  gameSuggestions.value = [];
-};
+const tabs = [
+  { id: 'current', name: 'Текущие' },
+  { id: 'upcoming', name: 'Предстоящие' },
+  { id: 'completed', name: 'Прошедшие' }
+]
 
 // Фильтрация турниров
 const filteredTournaments = computed(() => {
-  let filtered = tournaments.value;
+  console.log('Selected games:', selectedGames.value) // Для отладки
+  console.log('All tournaments:', tournaments.value) // Для отладки
+  
+  return tournaments.value.filter(tournament => {
+    const matchesGame = selectedGames.value.length === 0 || 
+                       selectedGames.value.includes(tournament.game?.name)
+    const matchesStatus = tournament.status === statusMap[activeTab.value]
+    return matchesGame && matchesStatus
+  })
+})
 
-  if (selectedGame.value) {
-    filtered = filtered.filter(tournament => tournament.game.name.includes(selectedGame.value));
+// Загрузка турниров
+const fetchTournaments = async () => {
+  try {
+    const res = await fetch('http://event-edge-su/api/guest/tournaments')
+    tournaments.value = await res.json()
+  } catch (e) {
+    console.error('Ошибка при загрузке турниров:', e)
+    tournaments.value = []
   }
+}
 
-  if (showActiveOnly.value) {
-    filtered = filtered.filter(tournament => tournament.status === "active");
+// Загрузка игр
+const fetchGames = async () => {
+  try {
+    const res = await fetch('http://event-edge-su/api/guest/games')
+    const data = await res.json()
+    games.value = data
+  } catch (e) {
+    console.error('Ошибка при загрузке игр:', e)
+    games.value = []
   }
+}
 
-  return filtered;
-});
-
-// Обработчик изображений
-const getImageUrl = (path) => {
-  if (!path) {
-    return "https://via.placeholder.com/300x200?text=No+Image";
+// Обработчик выбора игры
+const handleGameSelection = (gameName) => {
+  const index = selectedGames.value.indexOf(gameName)
+  if (index === -1) {
+    selectedGames.value.push(gameName)
+  } else {
+    selectedGames.value.splice(index, 1)
   }
-  return path.startsWith('http') ? path : `http://event-edge-su/storage/${path}`;
-};
+}
+
+// Удаление одной игры из фильтра
+const removeGame = (gameName) => {
+  const index = selectedGames.value.indexOf(gameName)
+  if (index !== -1) {
+    selectedGames.value.splice(index, 1)
+  }
+}
+
+// Очистка всех игр из фильтра
+const clearGames = () => {
+  selectedGames.value = []
+}
+
+// Форматирование даты
+function formatDate(dateStr) {
+  if (!dateStr) return ''
+  const date = new Date(dateStr.replace(' ', 'T'))
+  return date.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+// Получение URL аватара
+function getAvatarUrl(avatar) {
+  if (!avatar) return ''
+  if (avatar.startsWith('http')) return avatar
+  return `http://event-edge-su/storage/${avatar}`
+}
+
+// Переключение панели управления
+const toggleControlPanel = () => {
+  // Реализуйте по необходимости
+}
+
+// Navigation to tournament details
+const navigateToTournament = (tournament) => {
+  router.push(`/tournaments/${tournament.id}`)
+}
+
+// Маппинг статусов
+const statusMap = {
+  current: 'ongoing',
+  upcoming: 'pending',
+  past: 'finished'
+}
+
+// Загрузка данных при монтировании
+onMounted(() => {
+  fetchGames()
+  fetchTournaments()
+})
+
+// Экспортируем необходимые данные и методы для использования в Bar
+defineExpose({
+  games,
+  selectedGames,
+  handleGameSelection
+})
 </script>
 
 <style scoped>
+.home {
+  margin-top: 80px;
+  display: flex;
+  min-height: 100vh;
+  background: #121212;
+}
 
-.tournaments {
-  max-width: 1200px;
-  margin: 50px auto;
+.main-content {
+  flex: 1;
+  margin-left: 280px;
   padding: 20px;
 }
 
-.filter-toggle-btn {
-  display: block;
-  margin: 20px auto;
-  padding: 10px 20px;
-  font-size: 1.2rem;
-  background-color: #007bff;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.filter-toggle-btn:hover {
-  background-color: #0056b3;
-}
-.details-button {
-  margin-top: 10px;
-  background-color: #ffffff;
-  color: #000;
-  padding: 8px 16px; /* уменьшение отступов */
-  border-radius: 8px; /* уменьшение радиуса */
-  font-size: 1rem; /* уменьшение размера шрифта */
-  font-weight: bold;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  border: 3px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease-in-out;
-  position: relative;
-  overflow: hidden;
-  z-index: 1;
-}
-
-
-.details-button:hover {
-  animation: pulseBorder 1.5s infinite ease-in-out;
-  transform: scale(1.05);
-  background-color: #000;
-  color: #fff;
-}
-
-.details-button:active {
-  transform: scale(0.95);
-}
-
-/* Анимация пульсирующей обводки */
-@keyframes pulseBorder {
-  0% {
-    border-color: rgba(255, 255, 255, 0.5);
-  }
-  50% {
-    border-color: rgba(255, 255, 255, 1);
-  }
-  100% {
-    border-color: rgba(255, 255, 255, 0.5);
-  }
-}
-.game-filter {
+.main-header {
   display: flex;
-  gap: 30px;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
 }
 
-.filter-column {
-  flex: 1;
-}
-
-.filter-title {
-  font-size: 1.2rem;
-  font-weight: bold;
-  margin: 10px auto;
-  color: #fff;
-}
-
-.game-checkbox {
+.header-left {
   display: flex;
   align-items: center;
-  padding: 5px;
+  gap: 20px;
+}
+
+.header-left h1 {
+  color: #fff;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.game-selector {
+  display: flex;
+  align-items: center;
   gap: 10px;
+  padding: 8px 16px;
+  background: #2d2d2d;
+  border-radius: 8px;
   color: #fff;
-}
-
-.game-checkbox input {
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-  width: 20px; /* Размер галочки */
-  height: 20px;
-  border-radius: 4px; /* Радиус углов */
-  background-color: #ddd; /* Цвет фона, когда не выбрано */
-  border: 2px solid #bbb; /* Граница чекбокса */
-  position: relative;
-  cursor: pointer;
   transition: all 0.3s ease;
 }
 
-.game-checkbox input:checked {
-  background-color: #270544; /* Зеленый фон, когда выбран */
-  border-color: #270544; /* Зеленая граница */
+.selected-games {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.game-checkbox input:checked::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 8px;
-  height: 14px;
-  border: solid white;
-  border-width: 0 3px 3px 0;
-  transform: translate(-50%, -50%) rotate(45deg); /* Центрируем галочку */
+.selected-game {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: #630181;
+  border-radius: 4px;
+  font-size: 14px;
 }
 
-.game-checkbox input:hover {
-  background-color: #270544; /* Цвет фона при наведении */
+.clear-game {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
 }
 
-.game-checkbox input:active {
-  background-color: #270544; /* Цвет фона при активации */
+.clear-game:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
-.status-checkbox input {
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-  width: 20px; /* Размер галочки */
-  height: 20px;
-  border-radius: 4px; /* Радиус углов */
-  background-color: #ddd; /* Цвет фона, когда не выбрано */
-  border: 2px solid #bbb; /* Граница чекбокса */
-  position: relative;
+
+.clear-all {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.clear-all:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tournament-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+}
+
+.tab-button {
+  padding: 10px 20px;
+  background: #2d2d2d;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
   cursor: pointer;
   transition: all 0.3s ease;
+  font-weight: 500;
 }
 
-.status-checkbox input:checked {
-  background-color: #270544; /* Зеленый фон, когда выбран */
-  border-color: #270544; /* Зеленая граница */
+.tab-button:hover {
+  background: #3d3d3d;
+  transform: translateY(-1px);
 }
 
-.status-checkbox input:checked::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 8px;
-  height: 14px;
-  border: solid white;
-  border-width: 0 3px 3px 0;
-  transform: translate(-50%, -50%) rotate(45deg); /* Центрируем галочку */
+.tab-button.active {
+  background: #630181;
+  box-shadow: 0 0 15px rgba(99, 1, 129, 0.3);
 }
 
-.status-checkbox input:hover {
-  background-color: #270544; /* Цвет фона при наведении */
-}
-
-.status-checkbox input:active {
-  background-color: #270544; /* Цвет фона при активации */
-}
-.status-checkbox {
-  display: flex;
-  align-items: center;  /* Выравнивание по вертикали */
-  color: #fff;
-  font-size: 1rem;
-}
-
-.status-checkbox input {
-  margin-right: 10px;  /* Отступ между чекбоксом и текстом */
-}
-
-.tournament-list {
-  margin-top: 50px;
-  display: flex;
-  flex-direction: column;
-  gap: 50px;
+.tournaments-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
 }
 
 .tournament-card {
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 0;
+  color: #fff;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 40px;
-  padding: 20px;
-  border-radius: 15px;
-  background: #222;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  transition: transform 0.3s ease;
+  flex-direction: column;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: pointer;
 }
 
 .tournament-card:hover {
-  transform: scale(1.02);
+  transform: translateY(-5px);
+  box-shadow: 0 0 20px rgba(99, 1, 129, 0.2);
+  border-color: rgba(99, 1, 129, 0.3);
+}
+
+.tournament-image-block {
+  position: relative;
+  width: 100%;
+  height: 180px;
+  background: #222;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .tournament-image {
-  flex: 1;
-  max-width: 40%;
-}
-.tournament-image img {
   width: 100%;
-  height: auto;
-  border-radius: 10px;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
 }
 
-.tournament-info {
-  flex: 2;
-  max-width: 50%;
-  color: #fff;
+.tournament-card:hover .tournament-image {
+  transform: scale(1.05);
+}
+
+.game-logo {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  width: 48px;
+  height: 48px;
+  background: #fff;
+  border-radius: 50%;
+  object-fit: contain;
+  border: 2px solid #222;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.tournament-content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .tournament-name {
-  font-size: 1.8rem;
-  font-weight: bold;
-}
-
-.game-name, .organizer-name, .description, .status {
-  font-size: 1rem;
-  color: #ccc;
-  margin: 5px 0;
-}
-
-/* Мобильные стили */
-@media (max-width: 768px) {
-  .tournament-card {
-    flex-direction: column;
-    text-align: center;
-  }
-
-
-}
-.tournament-image {
-    max-width: 80%;
-  }
-
-  .tournament-info {
-    max-width: 100%;
-  }
-  .search-container {
-  position: relative;
-  width: 100%;
-  max-width: 600px;
-  margin: 20px auto 20px; /* Добавлен отступ сверху */
-  transition: all 0.3s ease;
-}
-
-.search-input {
-  width: 100%;
-  padding: 14px;
-  font-size: 1.2rem;
-  border: 2px solid #bbb;
-  border-radius: 10px;
-  transition: all 0.3s ease;
-}
-
-.search-input:focus {
-  width: 110%;
-  font-size: 1.4rem;
-  border-color: #270544;
-}
-
-.suggestions {
-  position: absolute;
-  width: 100%;
-  background: white;
-  color: #000;
-  border: 1px solid #ccc;
-  border-radius: 10px;
-  list-style: none;
-  padding: 5px;
-  margin: 0;
-  max-height: 200px;
-  overflow-y: auto;
-  z-index: 10;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-.suggestions li {
-  padding: 12px;
-  font-size: 1.2rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  transition: background 0.2s;
-}
-
-.suggestions li:hover {
-  background: #eee;
-}
-
-.highlighted {
-  background-color: yellow;
-  color: black;
-  font-weight: bold;
-  padding: 2px 4px;
-  border-radius: 3px;
-}
-.game-logo {
-  width: 30px;
-  height: 30px;
-  object-fit: cover;
-  border-radius: 4px;
-}
-
-.details-button {
-  margin-top: 10px;
-  background-color: #ffffff;
-  color: #000;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: bold;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  border: 3px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease-in-out;
-  position: relative;
-  overflow: hidden;
-  z-index: 1;
-}
-
-.details-button:hover {
-  animation: pulseBorder 1.5s infinite ease-in-out;
-  transform: scale(1.05);
-  background-color: #000;
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 4px;
   color: #fff;
 }
 
-.details-button:active {
-  transform: scale(0.95);
+.tournament-status {
+  margin-bottom: 8px;
 }
 
-/* Новое правило для создания отступа между кнопками */
-.details-button + .details-button {
-  margin-left: 10px; /* добавляем отступ между кнопками */
+.status-label {
+  background: #630181;
+  color: #fff;
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-block;
 }
-.filter-buttons-container {
+
+.tournament-description {
+  color: #bbb;
+  font-size: 15px;
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.tournament-info {
   display: flex;
-  gap: 10px; /* Расстояние между кнопками */
-  justify-content: center;
-  margin-top: 10px; /* или любое другое значение для отступа сверху */
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #aaa;
+  font-size: 14px;
+}
+
+.info-item i {
+  color: #630181;
+  width: 16px;
+  text-align: center;
+}
+
+.organizer-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-left: 6px;
+  border: 1px solid #333;
+}
+
+.register-button {
+  width: 100%;
+  padding: 12px;
+  background: #630181;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 16px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.register-button:hover {
+  background: #7a019c;
+  box-shadow: 0 0 15px rgba(99, 1, 129, 0.3);
+  transform: translateY(-1px);
+}
+
+.register-button:active {
+  transform: translateY(0);
 }
 </style>

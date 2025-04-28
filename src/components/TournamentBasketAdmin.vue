@@ -67,7 +67,6 @@ import axios from "axios";
 export default {
   data() {
     return {
-      teams: [],
       stages: [],
       tournaments: [],
       stageIndex: null,
@@ -82,7 +81,6 @@ export default {
   },
   async mounted() {
     await this.fetchTournaments();
- 
   },
   computed: {
     filteredTournaments() {
@@ -95,7 +93,74 @@ export default {
     },
   },
   methods: {
+    async fetchBracket() {
+      if (!this.selectedTournamentId) return;
+      try {
+        const response = await axios.get(`http://event-edge-su/api/guest/tournaments/${this.selectedTournamentId}/basket`);
+        console.log("Данные от API:", response.data);
+        this.stages = this.createBracket(response.data);
+        console.log("Обновлённые стадии:", this.stages);
+      } catch (error) {
+        console.error("Ошибка загрузки сетки:", error);
+      }
+    },
+    createBracket(matches) {
+      const stagesMap = {};
+      const stageIdSet = new Set();
 
+      matches.forEach(match => {
+        const stageId = match.game_match.stage_id;
+        stageIdSet.add(stageId);
+        if (!stagesMap[stageId]) {
+          stagesMap[stageId] = [];
+        }
+
+        stagesMap[stageId].push({
+          match_id: match.game_match.id,
+          team1: match.team_a,
+          team2: match.team_b,
+          winner_team_id: match.winner_team,
+        });
+      });
+
+      const sortedStageIds = [...stageIdSet].sort((a, b) => a - b);
+      const stagesArray = sortedStageIds.map(stage_id => ({
+        stage_id,
+        matches: stagesMap[stage_id],
+      }));
+
+      const initialStage = stagesArray[0];
+      const initialTeamCount = initialStage?.matches.length * 2 || 0;
+
+      const totalStages = Math.ceil(Math.log2(initialTeamCount));
+
+      while (stagesArray.length < totalStages) {
+        const prevStage = stagesArray[stagesArray.length - 1];
+        const winners = prevStage.matches.map(m => m.winner_team_id);
+
+        const newMatches = [];
+        for (let i = 0; i < Math.ceil(winners.length / 2); i++) {
+          const team1 = winners[i * 2] || null;
+          const team2 = winners[i * 2 + 1] || null;
+
+          newMatches.push({
+            team1: team1 ?? 'TBE',
+            team2: team2 ?? 'TBE',
+            winner_team_id: null,
+          });
+        }
+
+        stagesArray.push({
+          stage_id: stagesArray.length + 1,
+          matches: newMatches,
+        });
+      }
+
+      return stagesArray;
+    },
+    getTeamName(teamName) {
+      return teamName || "TBE";
+    },
     async fetchTournamentData() {
   try {
     const response = await axios.get(`http://event-edge-su/api/guest/tournaments/${this.selectedTournamentId}`);
@@ -171,117 +236,77 @@ async saveResults() {
 },
 
 async createNextStageOnServer() {
-  // Найдем первую завершенную стадию, чтобы взять победителей
-  const lastCompletedStageIndex = this.stages.findIndex(stage =>
-    stage.matches.every(match => match.winner_team_id !== null)
-  );
+  // Находим последнюю полностью завершённую стадию
+  const lastCompletedStageIndex = this.stages
+    .slice() // копируем массив, чтобы не мутировать его
+    .reverse() // начинаем проверку с последней стадии
+    .findIndex(stage =>
+      stage.matches.length > 0 &&
+      stage.matches.every(match => match.winner_team_id !== null)
+    );
 
   if (lastCompletedStageIndex === -1) {
     console.log("Нет завершенной стадии для создания следующей.");
     return;
   }
-  console.log('currentStageName:', this.currentStageName);
-  console.log('Stages:', this.stages);
-  const stageMapping = {
-  'Group Stage': 1,
-  'Quarterfinals': 2,
-  'Semifinals': 3,
-  'Finals': 4
-};
-const currentStageId = stageMapping[this.currentStageName];
 
-const currentStage = this.stages.find(stage => stage.stage_id === currentStageId);
+  // Переводим индекс обратно к нормальному порядку
+  const actualStageIndex = this.stages.length - 1 - lastCompletedStageIndex;
+  const currentStage = this.stages[actualStageIndex];
+
   console.log("Текущая заполненная стадия:", currentStage);
 
-  // Получим победителей из текущей стадии
-  const winners = currentStage.matches
-    .map(match => match.winner_team_id)
-    .filter(winner => winner !== null);
+  const winners = currentStage.matches.map(m => m.winner_team_id).filter(w => w !== null);
 
-  console.log("Победители", winners); // Для дебага
-
-  if (winners.length < 2) {
-    console.log("Недостаточно победителей для следующей стадии.");
+  if (winners.length === 0) {
+    console.log("Нет победителей для генерации следующей стадии.");
     return;
   }
 
-  // Создадим новые матчи для следующей стадии (1/8)
+  // Формируем матчи следующей стадии
   const nextStageMatches = [];
-for (let i = 0; i < winners.length; i += 2) {
-  if (i + 1 < winners.length) {
-    // Составляем матч с двумя победителями
+  for (let i = 0; i < winners.length; i += 2) {
     const match = {
       team_1_id: winners[i],
-      team_2_id: winners[i + 1],
+      team_2_id: winners[i + 1] || null,
     };
-
-    // Если победитель уже есть, добавляем его в матч
-    if (match.winner_team_id !== null) {
-      match.winner_team_id = null;  // Можно оставить как null или уберите это поле
-    }
-
-    nextStageMatches.push(match);
-  } else {
-    // Если нечётное количество победителей, матч с одним участником
-    const match = {
-      team_1_id: winners[i],
-      team_2_id: null, // Второй команды нет
-    };
-
-    // Победитель будет выбран позже, и мы не указываем его сейчас
     nextStageMatches.push(match);
   }
-}
 
-console.log("Отправляемые матчей для следующей стадии:", nextStageMatches);
+  const nextStageData = {
+    tournament_id: this.selectedTournamentId,
+    stage_id: currentStage.stage_id, // важный момент: передаём id ТЕКУЩЕЙ завершённой стадии
+    matches: nextStageMatches
+  };
 
-// Подготовим данные для создания новой стадии
-const nextStageData = {
-  tournament_id: this.selectedTournamentId,
-  stage_id: currentStage.stage_id, // Указываем id текущей стадии
-  matches: nextStageMatches.map(match => {
-    // Если есть победитель, добавляем его, если нет, не передаем
-    const matchData = {
-      team_1_id: match.team_1_id,
-      team_2_id: match.team_2_id,
-    };
-    if (match.winner_team_id !== null) {
-      matchData.winner_team_id = match.winner_team_id;
+  console.log("Данные для следующей стадии:", nextStageData);
+
+  try {
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user || !user.token) {
+      alert("Вы не авторизованы!");
+      return;
     }
-    return matchData;
-  }),
-};
 
-console.log("Отправка данных для следующей стадии:", nextStageData);
+    const response = await axios.post(
+      "http://event-edge-su/api/admin/basket/create-stage",
+      nextStageData,
+      {
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
-// Отправим на сервер запрос для создания новой стадии
-try {
-  const user = JSON.parse(localStorage.getItem("user"));
-  if (!user || !user.token) {
-    alert("Вы не авторизованы!");
-    return;
+    console.log("Новая стадия успешно создана:", response.data);
+
+    await this.addMatchesToBracket(response.data.matches);
+    await this.fetchBracket();
+
+  } catch (error) {
+    console.error("Ошибка при создании следующей стадии:", error.response?.data || error);
   }
-
-  const response = await axios.post(
-    "http://event-edge-su/api/admin/basket/create-stage",
-    nextStageData,
-    {
-      headers: {
-        Authorization: `Bearer ${user.token}`,
-        "Content-Type": "application/json",
-      },
-    }
-  );
-
-  console.log("Новая стадия успешно создана:", response.data);
-
-  await this.addMatchesToBracket(response.data.matches);
-  // Обновляем сетку турнира
-  await this.fetchBracket();
-  console.log("Обновленные данные турнира:", this.stages);
-} catch (error) {
-  console.error("Ошибка при создании следующей стадии:", error);
-}
 },
     async fetchTournaments() {
       try {
@@ -326,92 +351,27 @@ try {
     console.error("Ошибка при добавлении матчей в сетку:", error.response?.data || error);
   }
 },
-    async fetchBracket() {
-  if (!this.selectedTournamentId) return;
-  try {
-    await this.fetchTeams();
-    const response = await axios.get(`http://event-edge-su/api/guest/tournaments/${this.selectedTournamentId}/basket`);
-    console.log("Данные от API:", response.data);
-
-    // Обновляем `stages` сразу после получения данных!
-    this.stages = this.createBracket(response.data.map(item => item.game_match));
-
-    console.log("Обновлённые стадии:", this.stages);
-  } catch (error) {
-    console.error("Ошибка загрузки сетки:", error);
-  }
-},
-
-    async fetchTeams() {
-      try {
-        const response = await axios.get("http://event-edge-su/api/guest/teams");
-        this.teams = response.data;
-      } catch (error) {
-        console.error("Ошибка загрузки команд:", error);
-      }
-    },
-
-    createBracket(gameMatches) {
-      let stagesMap = {};
-
-      gameMatches.forEach(match => {
-        if (!stagesMap[match.stage_id]) {
-          stagesMap[match.stage_id] = [];
-        }
-        stagesMap[match.stage_id].push({
-          match_id: match.id,
-          team1: match.team_1_id,
-          team2: match.team_2_id,
-          winner_team_id: match.winner_team_id,
-        });
-      });
-
-      let stagesArray = Object.entries(stagesMap)
-        .sort(([a], [b]) => a - b)
-        .map(([stage_id, matches]) => ({
-          stage_id: Number(stage_id),
-          matches,
-        }));
-
-      const requiredStages = 4;
-      while (stagesArray.length < requiredStages) {
-        const previousStage = stagesArray[stagesArray.length - 1] || { matches: [] };
-        const newMatches = [];
-
-        for (let i = 0; i < Math.ceil(previousStage.matches.length / 2); i++) {
-          newMatches.push({
-            match_id: `tbe-${stagesArray.length}-${i}`,
-            team1: null,
-            team2: null,
-            winner_team_id: null,
-          });
-        }
-
-        stagesArray.push({
-          stage_id: stagesArray.length + 1,
-          matches: newMatches,
-        });
-      }
-
-      return stagesArray;
-    },
-
-    getTeamName(teamId) {
-      const team = this.teams.find(t => t.id === teamId);
-      return team ? team.name : "TBE";
-    },
-
-    
-
-selectWinner(stageIndex, matchIndex, teamId) {
+    selectWinner(stageIndex, matchIndex, teamId) {
   const match = this.stages[stageIndex].matches[matchIndex];
 
-  // Проверяем, что для этого матча еще не выбран победитель
-  if (match.winner_team_id !== null) {
-    return; // Если победитель уже выбран, не позволяем выбрать другого
+  // Проверяем, что для этого матча ещё не выбран победитель
+  if (match.winner_team_id === teamId) {
+    // Если выбран тот же победитель, отменяем выбор
+    match.winner_team_id = null;
+    console.log("Победитель отменён. Обновлённые стадии:", this.stages);
+    return;
   }
 
+  // Если победитель уже был выбран, разрешаем выбрать нового
+  if (match.winner_team_id !== null) {
+    match.winner_team_id = teamId;
+    console.log("Победитель изменён. Обновлённые стадии:", this.stages);
+    return;
+  }
+
+  // Если победителя нет, просто устанавливаем его
   match.winner_team_id = teamId;
+  console.log("Победитель выбран. Обновлённые стадии:", this.stages);
 
   // Если есть следующая стадия, пытаемся обновить её матчи
   const nextStage = this.stages[stageIndex + 1];
@@ -425,8 +385,7 @@ selectWinner(stageIndex, matchIndex, teamId) {
       }
     }
   }
-
-  console.log("Обновлённые стадии:", this.stages);
+  //console.log("Обновлённые стадии:", this.stages);
 },
 
     selectTournament(tournament) {
@@ -460,7 +419,6 @@ selectWinner(stageIndex, matchIndex, teamId) {
     margin-top: 100px;
     padding: 30px 20px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #000000;
   }
   
   .title {
@@ -514,12 +472,12 @@ selectWinner(stageIndex, matchIndex, teamId) {
   }
   
   .suggestions li:hover {
-    background-color: #f5c116;
+    background-color: #630181;
     color: black;
   }
   
   .add-match-btn {
-    background-color: #f5c116;
+    background-color:#630181;
     color: black;
     font-weight: bold;
     padding: 10px 15px;
@@ -547,7 +505,7 @@ selectWinner(stageIndex, matchIndex, teamId) {
   }
   
   .winner {
-    background-color: #f5c116 !important;
+    background-color: #630181 !important;
   }
   
   .champion {

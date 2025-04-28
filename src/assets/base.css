@@ -1,6 +1,6 @@
 :root {
   --secondary-color: #ffffff;
-  --primary-bg: #000000;
+  --primary-bg: #121212;
   --secondary-bg: #222;
   --light-bg: #333;
 
@@ -31,11 +31,6 @@ main {
   animation: pageChange .5s linear;
 }
 
-@keyframes pageChange {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(0);
-  }
+.content {
+  flex: 1; /* Занимает все доступное пространство */
 }
