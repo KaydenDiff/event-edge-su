@@ -3,8 +3,13 @@ import { RouterView, useRoute } from 'vue-router'
 import Header from "@/components/Header.vue";
 import Bar from "@/components/Bar.vue";
 import { computed, ref, provide } from 'vue';
+import { onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
 
 const route = useRoute();
+const router = useRouter();
+const authStore = useAuthStore();
 
 // Определяем, на каких страницах показывать секцию с играми
 const showGamesSection = computed(() => {
@@ -41,6 +46,19 @@ const handleGameSelected = (gameName) => {
 const handleMenuSelected = (section) => {
   selectedMenu.value = section;
 };
+
+onMounted(async () => {
+  // Проверяем аутентификацию при загрузке приложения
+  if (authStore.accessToken) {
+    try {
+      await authStore.fetchUserProfile();
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      authStore.clearAuth();
+      router.push('/login');
+    }
+  }
+});
 </script>
 
 <template>
@@ -67,4 +85,22 @@ const handleMenuSelected = (section) => {
     max-width: 1440px;
     padding: 10px 10px;
   }
+</style>
+
+<style>
+.app {
+  min-height: 100vh;
+  background: #121212;
+  color: #fff;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
 </style>

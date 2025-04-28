@@ -56,8 +56,9 @@ export default {
   },
   async created() {
     try {
-      const user = JSON.parse(localStorage.getItem("user"));
-      if (!user || !user.token) {
+      const authStore = useAuthStore();
+      const token = authStore.accessToken;
+      if (!token) {
         this.error = "Требуется авторизация";
         this.loading = false;
         return;
@@ -67,7 +68,7 @@ export default {
       const response = await fetch('http://event-edge-su/api/my-profile', {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token}`
+          'Authorization': `Bearer ${token}`
         }
       });
       
@@ -96,17 +97,18 @@ export default {
           tournament_id: this.tournamentId,
           team_id: this.form.teamId
         };
-        const user = JSON.parse(localStorage.getItem("user"));
-      if (!user || !user.token) {
-        this.error = "Требуется авторизация";
-        this.loading = false;
-        return;
-      }
+        const authStore = useAuthStore();
+        const token = authStore.accessToken;
+        if (!token) {
+          this.error = "Требуется авторизация";
+          this.loading = false;
+          return;
+        }
         const response = await fetch('http://event-edge-su/api/tournament/notify-registration', {
           method: 'POST',
           headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token}`
+          'Authorization': `Bearer ${token}`
         },
           body: JSON.stringify(registrationData)
         });

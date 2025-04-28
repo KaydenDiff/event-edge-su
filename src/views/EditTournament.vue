@@ -69,6 +69,7 @@
 </template>
 
 <script>
+  import { useAuthStore } from '@/stores/auth'
 export default {
   name: 'EditTournament',
   data() {
@@ -210,18 +211,19 @@ export default {
         updatedFields.append('image', this.imageFile);
       }
 
-      const user = JSON.parse(localStorage.getItem('user'));
-      if (!user || !user.token) {
+      const authStore = useAuthStore();
+      if (!authStore.accessToken) {
         console.error("❌ Ошибка: токен не найден!");
         alert("Ошибка: вы не авторизованы");
         return;
       }
 
+
       try {
         const response = await fetch(`http://event-edge-su/api/admin/tournaments/update/${this.tournament.id}`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${user.token}`
+            'Authorization': `Bearer ${authStore.accessToken}`
           },
           body: updatedFields
         });

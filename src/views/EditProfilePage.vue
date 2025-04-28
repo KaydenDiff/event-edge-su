@@ -93,7 +93,7 @@ export default {
 
       try {
         const authStore = useAuthStore();
-        const token = authStore.user?.token;
+        const token = authStore.accessToken;  
 
         const response = await axios.get("http://event-edge-su/api/my-profile", {
           headers: { Authorization: `Bearer ${token}` }
@@ -177,15 +177,16 @@ export default {
       }
 
       try {
-        const user = JSON.parse(localStorage.getItem("user"));
-        if (!user || !user.token) {
+        const authStore = useAuthStore();
+        const token = authStore.accessToken;
+        if (!token) {
           this.error = "Токен не найден";
           return;
         }
 
         await axios.post("http://event-edge-su/api/profile/update", formData, {
           headers: {
-            Authorization: `Bearer ${user.token}`,
+            'Authorization': `Bearer ${token}`,
             "Content-Type": "multipart/form-data"
           }
         });

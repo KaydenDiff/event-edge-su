@@ -103,96 +103,94 @@
 </template>
 
 <script>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import axios from 'axios';
 import BaseButton from '@/components/BaseButton.vue';
+import { useAuthStore } from '@/stores/auth'
 
 export default {
   name: 'NotificationSection',
   components: {
     BaseButton
   },
-  data() {
-    return {
-      tournaments: [],
-      teams: [],
-      stages: [],
-      matches: [],
-      selectedNotificationType: '',
-      selectedTournamentId: '',
-      additionalData: {},
-      message: '',
-      isError: false,
-      teamsInTournament: [],
-      teamsInMatch: []
-    };
-  },
-  computed: {
-    showTournamentSelect() {
-      return ['tournament-start', 'next-stage', 'team-elimination', 'team-registration-accept'].includes(this.selectedNotificationType);
-    },
-    filteredTeams() {
-      if (!this.selectedTournamentId) return [];
+  setup() {
+    const authStore = useAuthStore();
+    const tournaments = ref([]);
+    const teams = ref([]);
+    const stages = ref([]);
+    const matches = ref([]);
+    const selectedNotificationType = ref('');
+    const selectedTournamentId = ref('');
+    const additionalData = ref({});
+    const message = ref('');
+    const isError = ref(false);
+    const teamsInTournament = ref([]);
+    const teamsInMatch = ref([]);
+    const showTournamentSelect = computed(() => ['tournament-start', 'next-stage', 'team-elimination', 'team-registration-accept'].includes(selectedNotificationType.value));
+    const filteredTeams = computed(() => {
+      if (!selectedTournamentId.value) return [];
 
-      const tournament = this.tournaments.find(t => t.id === this.selectedTournamentId);
+      const tournament = tournaments.value.find(t => t.id === selectedTournamentId.value);
       if (!tournament || !tournament.teams) return [];
 
       return tournament.teams.map(team => ({
         id: team.pivot.team_id,
         name: team.name
       }));
-    },
-    isFormValid() {
-      if (!this.selectedNotificationType) return false;
-      if (this.showTournamentSelect && !this.selectedTournamentId) return false;
+    });
+    const isFormValid = computed(() => {
+      if (!selectedNotificationType.value) return false;
+      if (showTournamentSelect.value && !selectedTournamentId.value) return false;
       
-      switch (this.selectedNotificationType) {
+      switch (selectedNotificationType.value) {
         case 'match-reschedule':
-          return !!this.additionalData.match_id && !!this.additionalData.new_time;
+          return !!additionalData.value.match_id && !!additionalData.value.new_time;
         case 'match-result':
-          return !!this.additionalData.result && !!this.additionalData.winner_team_id;
+          return !!additionalData.value.result && !!additionalData.value.winner_team_id;
         case 'next-stage':
-          return !!this.additionalData.team_id && !!this.additionalData.stage_id;
+          return !!additionalData.value.team_id && !!additionalData.value.stage_id;
         case 'team-elimination':
-          return !!this.additionalData.team_id;
+          return !!additionalData.value.team_id;
         default:
           return true;
       }
-    }
-  },
-  methods: {
-    async fetchTournaments() {
+    });
+
+    const fetchTournaments = async () => {
       try {
         const response = await fetch('http://event-edge-su/api/guest/tournaments');
-        this.tournaments = await response.json();
+        tournaments.value = await response.json();
       } catch (error) {
         console.error('Ошибка загрузки турниров:', error);
-        this.message = 'Ошибка при загрузке турниров';
-        this.isError = true;
+        message.value = 'Ошибка при загрузке турниров';
+        isError.value = true;
       }
-    },
-    async fetchTeams() {
+    };
+
+    const fetchTeams = async () => {
       try {
         const response = await fetch('http://event-edge-su/api/guest/teams');
-        this.teams = await response.json();
+        teams.value = await response.json();
       } catch (error) {
         console.error('Ошибка загрузки команд:', error);
       }
-    },
-    async fetchStages() {
+    };
+
+    const fetchStages = async () => {
       try {
         const response = await fetch('http://event-edge-su/api/guest/stages');
-        this.stages = await response.json();
+        stages.value = await response.json();
       } catch (error) {
         console.error('Ошибка загрузки этапов:', error);
       }
-    },
-    async fetchMatches() {
+    };
+
+    const fetchMatches = async () => {
       try {
         const response = await fetch('http://event-edge-su/api/guest/game-matches');
         const data = await response.json();
-        this.matches = data.map(match => {
-          const tournament = this.tournaments.find(t => t.id === match.tournament_id);
+        matches.value = data.map(match => {
+          const tournament = tournaments.value.find(t => t.id === match.tournament_id);
           return {
             ...match,
             tournament_name: tournament?.name || 'Неизвестный турнир',
@@ -202,11 +200,12 @@ export default {
         });
       } catch (error) {
         console.error('Ошибка загрузки матчей:', error);
-        this.message = 'Ошибка при загрузке матчей';
-        this.isError = true;
+        message.value = 'Ошибка при загрузке матчей';
+        isError.value = true;
       }
-    },
-    formatMatchOption(match) {
+    };
+
+    const formatMatchOption = (match) => {
       const matchDate = new Date(match.match_date).toLocaleString('ru-RU', {
         day: '2-digit',
         month: '2-digit',
@@ -214,21 +213,22 @@ export default {
         minute: '2-digit'
       });
       return `${match.tournament_name} | ${match.team_1_name} vs ${match.team_2_name} (${matchDate})`;
-    },
-    async loadTeamsForTournament() {
-      if (!this.selectedTournamentId || 
-          !['next-stage', 'team-elimination', 'team-registration-accept'].includes(this.selectedNotificationType)) {
-        this.teamsInTournament = [];
+    };
+
+    const loadTeamsForTournament = async () => {
+      if (!selectedTournamentId.value || 
+          !['next-stage', 'team-elimination', 'team-registration-accept'].includes(selectedNotificationType.value)) {
+        teamsInTournament.value = [];
         return;
       }
 
       try {
-        const response = await fetch(`http://event-edge-su/api/guest/tournaments/${this.selectedTournamentId}/teams`);
+        const response = await fetch(`http://event-edge-su/api/guest/tournaments/${selectedTournamentId.value}/teams`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        this.teamsInTournament = data.teams.map(team => ({
+        teamsInTournament.value = data.teams.map(team => ({
           id: team.id,
           name: team.name,
           captain_id: team.captain_id,
@@ -238,81 +238,82 @@ export default {
         }));
       } catch (error) {
         console.error('Ошибка при загрузке команд турнира:', error);
-        this.message = 'Ошибка при загрузке команд турнира';
-        this.isError = true;
+        message.value = 'Ошибка при загрузке команд турнира';
+        isError.value = true;
       }
-    },
-    handleNotificationTypeChange() {
-      this.additionalData = {};
-      this.message = '';
-      this.selectedTournamentId = '';
+    };
+
+    const handleNotificationTypeChange = () => {
+      additionalData.value = {};
+      message.value = '';
+      selectedTournamentId.value = '';
       
-      if (this.selectedNotificationType === 'match-reschedule') {
+      if (selectedNotificationType.value === 'match-reschedule') {
         // Сначала загружаем турниры, затем матчи
-        this.fetchTournaments().then(() => {
-          this.fetchMatches();
+        fetchTournaments().then(() => {
+          fetchMatches();
         });
-      } else if (['tournament-start', 'next-stage', 'team-elimination', 'team-registration-accept'].includes(this.selectedNotificationType)) {
-        this.fetchTournaments();
+      } else if (['tournament-start', 'next-stage', 'team-elimination', 'team-registration-accept'].includes(selectedNotificationType.value)) {
+        fetchTournaments();
       }
 
-      if (this.selectedNotificationType === 'next-stage') {
-        this.fetchStages();
+      if (selectedNotificationType.value === 'next-stage') {
+        fetchStages();
       }
-    },
-    async sendNotification() {
+    };
+
+    const sendNotification = async () => {
       try {
         let endpoint = '';
         let data = {};
-        const user = JSON.parse(localStorage.getItem('user'));
         
-        if (!user || !user.token) {
+        if (!authStore.accessToken) {
           throw new Error('Не найден токен авторизации');
         }
 
-        switch (this.selectedNotificationType) {
+        switch (selectedNotificationType.value) {
           case 'tournament-start':
-            endpoint = `/admin/tournament/${this.selectedTournamentId}/notify-start`;
+            endpoint = `/admin/tournament/${selectedTournamentId.value}/notify-start`;
             break;
           case 'match-reschedule':
-            endpoint = `/admin/match/${this.additionalData.match_id}/notify-reschedule`;
-            data = { new_time: this.additionalData.new_time };
+            endpoint = `/admin/match/${additionalData.value.match_id}/notify-reschedule`;
+            data = { new_time: additionalData.value.new_time };
             break;
           case 'match-result':
-            endpoint = `/admin/match/${this.selectedTournamentId}/notify-result`;
+            endpoint = `/admin/match/${selectedTournamentId.value}/notify-result`;
             data = {
-              winner_team_id: this.additionalData.winner_team_id,
-              result: this.additionalData.result
+              winner_team_id: additionalData.value.winner_team_id,
+              result: additionalData.value.result
             };
             break;
           case 'next-stage':
-            endpoint = `/admin/tournament/${this.selectedTournamentId}/notify-next-stage`;
+            endpoint = `/admin/tournament/${selectedTournamentId.value}/notify-next-stage`;
             data = {
-              team_id: this.additionalData.team_id,
-              stage_id: this.additionalData.stage_id
+              team_id: additionalData.value.team_id,
+              stage_id: additionalData.value.stage_id
             };
             break;
           case 'team-elimination':
-            endpoint = `/admin/tournament/${this.selectedTournamentId}/notify-team-elimination`;
-            data = { team_id: this.additionalData.team_id };
+            endpoint = `/admin/tournament/${selectedTournamentId.value}/notify-team-elimination`;
+            data = { team_id: additionalData.value.team_id };
             break;
           case 'team-registration':
             endpoint = '/admin/tournament/notify-registration';
             data = {
-              tournament_id: this.selectedTournamentId,
-              team_id: this.additionalData.team_id
+              tournament_id: selectedTournamentId.value,
+              team_id: additionalData.value.team_id
             };
             break;
           case 'team-registration-accept':
-            endpoint = `/admin/tournament/${this.selectedTournamentId}/notify-team-registration-accept`;
-            data = { team_id: this.additionalData.team_id };
+            endpoint = `/admin/tournament/${selectedTournamentId.value}/notify-team-registration-accept`;
+            data = { team_id: additionalData.value.team_id };
             break;
         }
 
         const response = await fetch(`http://event-edge-su/api${endpoint}`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${user.token}`,
+            'Authorization': `Bearer ${authStore.accessToken}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(data)
@@ -322,27 +323,52 @@ export default {
           throw new Error('Ошибка при отправке уведомления');
         }
 
-        this.message = 'Уведомление успешно отправлено';
-        this.isError = false;
+        message.value = 'Уведомление успешно отправлено';
+        isError.value = false;
         
         // Очищаем форму после успешной отправки
-        this.selectedNotificationType = '';
-        this.selectedTournamentId = '';
-        this.additionalData = {};
+        selectedNotificationType.value = '';
+        selectedTournamentId.value = '';
+        additionalData.value = {};
       } catch (error) {
         console.error('Ошибка при отправке уведомления:', error);
-        this.message = error.message || 'Ошибка при отправке уведомления';
-        this.isError = true;
+        message.value = error.message || 'Ошибка при отправке уведомления';
+        isError.value = true;
       }
-    }
-  },
-  watch: {
-    selectedTournamentId() {
-      if (this.selectedTournamentId && 
-          ['next-stage', 'team-elimination', 'team-registration-accept'].includes(this.selectedNotificationType)) {
-        this.loadTeamsForTournament();
+    };
+
+    // Добавляем watch внутри setup
+    watch(selectedTournamentId, (newVal) => {
+      if (newVal && 
+          ['next-stage', 'team-elimination', 'team-registration-accept'].includes(selectedNotificationType.value)) {
+        loadTeamsForTournament();
       }
-    }
+    });
+
+    return {
+      tournaments,
+      teams,
+      stages,
+      matches,
+      selectedNotificationType,
+      selectedTournamentId,
+      additionalData,
+      message,
+      isError,
+      teamsInTournament,
+      teamsInMatch,
+      showTournamentSelect,
+      filteredTeams,
+      isFormValid,
+      fetchTournaments,
+      fetchTeams,
+      fetchStages,
+      fetchMatches,
+      formatMatchOption,
+      loadTeamsForTournament,
+      handleNotificationTypeChange,
+      sendNotification
+    };
   },
   mounted() {
     // При монтировании компонента ничего не загружаем

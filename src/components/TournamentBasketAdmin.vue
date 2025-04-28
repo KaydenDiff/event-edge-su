@@ -189,8 +189,8 @@ async saveResults() {
   try {
     console.log("Начинаем сохранение результатов...");
 
-    const user = JSON.parse(localStorage.getItem("user"));
-    if (!user || !user.token) {
+    const authStore = useAuthStore();
+    if (!authStore.accessToken) {
       alert("Вы не авторизованы!");
       return;
     }
@@ -215,7 +215,7 @@ async saveResults() {
   matches: matches,  // Используем уже сформированный массив `matches`
 }, {
   headers: {
-    Authorization: `Bearer ${user.token}`,
+    'Authorization': `Bearer ${authStore.accessToken}`,
     "Content-Type": "application/json",
   },
 });
@@ -282,8 +282,8 @@ async createNextStageOnServer() {
   console.log("Данные для следующей стадии:", nextStageData);
 
   try {
-    const user = JSON.parse(localStorage.getItem("user"));
-    if (!user || !user.token) {
+    const authStore = useAuthStore();
+    if (!authStore.accessToken) {
       alert("Вы не авторизованы!");
       return;
     }
@@ -293,7 +293,7 @@ async createNextStageOnServer() {
       nextStageData,
       {
         headers: {
-          Authorization: `Bearer ${user.token}`,
+          'Authorization': `Bearer ${authStore.accessToken}`,
           "Content-Type": "application/json",
         },
       }
@@ -318,8 +318,8 @@ async createNextStageOnServer() {
     },
     async addMatchesToBracket(nextStageMatches) {
   try {
-    const user = JSON.parse(localStorage.getItem("user"));
-    if (!user || !user.token) {
+    const authStore = useAuthStore();
+    if (!authStore.accessToken) {
       alert("Вы не авторизованы!");
       return;
     }
@@ -336,7 +336,7 @@ async createNextStageOnServer() {
         
         {
           headers: {
-            Authorization: `Bearer ${user.token}`,
+            'Authorization': `Bearer ${authStore.accessToken}`,
             "Content-Type": "application/json",
           },
         }

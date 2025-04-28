@@ -136,7 +136,7 @@ export default {
 
       try {
         const authStore = useAuthStore();
-        const token = authStore.user?.token;
+        const token = authStore.accessToken;
 
         const response = await axios.get(
           `http://event-edge-su/api/guest/tournaments/${this.match.tournament_id}/basket`,
@@ -178,7 +178,7 @@ export default {
 
       try {
         const authStore = useAuthStore();
-        const token = authStore.user?.token;
+        const token = authStore.accessToken;
 
         const matchData = {
           tournament_id: this.match.tournament_id,
@@ -214,8 +214,8 @@ export default {
       try {
         console.log("Начинаем сохранение результатов...");
 
-        const user = JSON.parse(localStorage.getItem("user"));
-        if (!user || !user.token) {
+        const authStore = useAuthStore();
+        if (!authStore.accessToken) {
           alert("Вы не авторизованы!");
           return;
         }
@@ -260,7 +260,7 @@ export default {
           requestData,
           {
             headers: {
-              Authorization: `Bearer ${user.token}`,
+              'Authorization': `Bearer ${authStore.accessToken}`,
               "Content-Type": "application/json",
             },
           }
@@ -339,8 +339,8 @@ export default {
       console.log("Данные для следующей стадии:", nextStageData);
 
       try {
-        const user = JSON.parse(localStorage.getItem("user"));
-        if (!user || !user.token) {
+        const authStore = useAuthStore();
+        if (!authStore.accessToken) {
           alert("Вы не авторизованы!");
           return;
         }
@@ -350,7 +350,7 @@ export default {
           nextStageData,
           {
             headers: {
-              Authorization: `Bearer ${user.token}`,
+              'Authorization': `Bearer ${authStore.accessToken}`,
               "Content-Type": "application/json",
             },
           }

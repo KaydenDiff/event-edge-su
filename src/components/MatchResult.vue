@@ -31,6 +31,7 @@
   </template>
   
   <script>
+  import { useAuthStore } from '@/stores/auth'
   export default {
     name: 'MatchResult',
     props: ['matchId', 'tournamentId', 'team1Id', 'team2Id'],
@@ -108,8 +109,8 @@
         }
       },
       async submitResult() {
-        const user = JSON.parse(localStorage.getItem('user'));
-        if (!user || !user.token) {
+        const authStore = useAuthStore();
+        if (!authStore.accessToken) {
           console.error('Токен не найден');
           return;
         }
@@ -125,7 +126,7 @@
           const response = await fetch(`http://event-edge-su/api/admin/game-matches/update/${this.matchId}`, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${user.token}`,
+              'Authorization': `Bearer ${authStore.accessToken}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(matchResult),

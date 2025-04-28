@@ -95,15 +95,16 @@ export default {
       error.value = null;
 
       try {
-        const user = JSON.parse(localStorage.getItem("user"));
-        if (!user || !user.token) {
+        const authStore = useAuthStore();
+        const token = authStore.accessToken;
+        if (!token) {
           error.value = "Пользователь не авторизован";
           return;
         }
 
         const response = await axios.get('http://event-edge-su/api/my-tournaments', {
           headers: {
-            Authorization: `Bearer ${user.token}`,
+            'Authorization': `Bearer ${token}`,
           }
         });
 

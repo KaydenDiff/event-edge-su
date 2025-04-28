@@ -40,7 +40,7 @@
 
 <script>
 import axios from "axios";
-
+import { useAuthStore } from "@/stores/auth.js";
 export default {
   name: "NotificationButton",
   data() {
@@ -58,19 +58,12 @@ export default {
   methods: {
     async fetchNotifications() {
       try {
-        const user = JSON.parse(localStorage.getItem("user"));
-        if (!user || !user.token) {
-          console.error("Токен не найден");
-          return;
-        }
+        const authStore = useAuthStore();
+        const token = authStore.accessToken;
 
         const response = await axios.get("http://event-edge-su/api/notifications", {
-          headers: {
-            Authorization: `Bearer ${user.token}`,
-            "Content-Type": "application/json",
-          },
+          headers: { Authorization: `Bearer ${token}` }
         });
-
         this.notifications = response.data.notifications;
         // Подсчет непрочитанных уведомлений
         this.unreadNotifications = this.notifications.filter(n => n.status === "unread");
@@ -82,15 +75,16 @@ export default {
 
     async markNotificationsAsRead() {
       try {
-        const user = JSON.parse(localStorage.getItem("user"));
-        if (!user || !user.token) {
+        const authStore = useAuthStore();
+        const token = authStore.accessToken;
+        if (!token) {
           console.error("Токен не найден");
           return;
         }
         // Отправляем запрос на сервер для пометки всех уведомлений как прочитанных
         const response = await axios.get("http://event-edge-su/api/notifications/unread", {
           headers: {
-            Authorization: `Bearer ${user.token}`,
+            'Authorization': `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         });

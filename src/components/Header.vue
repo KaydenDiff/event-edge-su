@@ -1,19 +1,16 @@
 <script setup>
-import { onMounted, computed } from "vue";
-import { useAuthStore } from '@/stores/auth';
+import { onMounted, computed, watch } from "vue";
 import { useRouter } from "vue-router";  // Для перенаправления
 import { icons } from '@/assets/icons';
-
+import { useAuthStore } from "@/stores/auth.js";
 // Инициализация хранилища и роутера
 const authStore = useAuthStore();
 const router = useRouter();
 
 // Извлекаем информацию о пользователе из хранилища
 const user = computed(() => authStore.user);
-const isAdmin = computed(() => user.value?.role === "Администратор");
-const isOrganizer = computed(() => user.value?.role === "Оператор");
-
-// Инициализация данных при монтировании компонента
+const isAdmin = computed(() => authStore.isAdmin);
+const isOrganizer = computed(() => authStore.isOrganizer);
 
 
 // Логика для выхода

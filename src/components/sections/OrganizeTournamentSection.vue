@@ -29,11 +29,37 @@
 
 <script setup>
 import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter();
+const authStore = useAuthStore();
 
 const goToCreateTournament = () => {
   router.push('/organize-tournament');
+};
+
+const handleSubmit = async (formData) => {
+  try {
+    if (!authStore.accessToken) {
+      throw new Error('Не авторизован');
+    }
+
+    const response = await axios.post(
+      'http://event-edge-su/api/tournaments/create',
+      formData,
+      {
+        headers: { 
+          'Authorization': `Bearer ${authStore.accessToken}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      }
+    );
+
+    // ... остальной код метода ...
+  } catch (err) {
+    // ... обработка ошибок ...
+  }
 };
 </script>
 

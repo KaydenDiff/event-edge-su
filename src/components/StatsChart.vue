@@ -50,6 +50,7 @@
 import { ref, onMounted } from 'vue';
 import { Line, Bar, Radar } from 'vue-chartjs';
 import axios from 'axios';
+import { useAuthStore } from '@/stores/auth'
 import { Chart as ChartJS, 
     CategoryScale, 
     LinearScale, 
@@ -110,21 +111,21 @@ const tournamentPopularityData = ref({
 
 const fetchStats = async () => {
   try {
-    const user = JSON.parse(localStorage.getItem("user"));
-  if (!user || !user.token) {
-    alert("Вы не авторизованы!");
-    return;
-  }
+    const authStore = useAuthStore();
+    if (!authStore.accessToken) {
+      alert("Вы не авторизованы!");
+      return;
+    }
     // Получение данных
     const overviewResponse = await axios.get("http://event-edge-su/api/admin/stats/overview", {
       headers: {
-        Authorization: `Bearer ${user.token}`,
+        'Authorization': `Bearer ${authStore.accessToken}`,
         "Content-Type": "application/json",
       },
     });
     const tournamentStatsResponse = await axios.get("http://event-edge-su/api/admin/stats/tournaments", {
       headers: {
-        Authorization: `Bearer ${user.token}`,
+        'Authorization': `Bearer ${authStore.accessToken}`,
         "Content-Type": "application/json",
       },
     });

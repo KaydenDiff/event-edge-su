@@ -82,7 +82,7 @@ import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import BaseButton from '@/components/BaseButton.vue'
-
+import { useAuthStore } from '@/stores/auth'
 export default {
   name: 'EditMatch',
   components: {
@@ -224,7 +224,7 @@ export default {
           payload,
           {
             headers: {
-              'Authorization': `Bearer ${user.token}`,
+              'Authorization': `Bearer ${authStore.accessToken}`,
               'Content-Type': 'application/json'
             }
           }

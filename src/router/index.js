@@ -154,29 +154,30 @@ const router = createRouter({
 });
 
 // Глобальный защитник маршрутов
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
-  const isAuthenticated = authStore.isAuthenticated;
-  const isAdmin = authStore.user?.role === 'admin';
-
-  // Проверка для страниц, требующих авторизации
-  if (to.meta.requiresAuth && !isAuthenticated) {
+  
+  // Проверяем, требуется ли аутентификация
+  
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+   
     next({ name: 'login', query: { redirect: to.fullPath } });
     return;
   }
-
-  // Проверка для страниц, требующих прав администратора
-  if (to.meta.requiresAdmin && !isAdmin) {
+  
+  // Проверяем, требуется ли роль администратора
+  if (to.meta.requiresAdmin && !authStore.isAdmin) {
+    console.log(authStore)
     next({ name: 'access-denied' });
     return;
   }
-
-  // Проверка для страниц, доступных только гостям (например, логин)
-  if (to.meta.requiresGuest && isAuthenticated) {
+  
+  // Проверяем, требуется ли быть гостем (для страниц логина и регистрации)
+  if (to.meta.requiresGuest && authStore.isAuthenticated) {
     next({ name: 'home' });
     return;
   }
-
+  
   next();
 });
 

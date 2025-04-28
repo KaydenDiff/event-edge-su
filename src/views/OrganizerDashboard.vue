@@ -171,7 +171,7 @@ export default {
           case 'Оператор':
             return 'operator';
           default:
-          return 'user';
+            return 'user';
         }
       } catch (error) {
         console.error('Ошибка при определении роли пользователя:', error);
@@ -274,9 +274,8 @@ export default {
       }
 
       try {
-        const userDataString = localStorage.getItem('user');
-        const userData = JSON.parse(userDataString);
-        const token = userData.token;
+        const authStore = useAuthStore();
+        const token = authStore.accessToken;
         const routePrefix = this.getRoutePrefix();
 
         const formData = new FormData();
@@ -306,7 +305,7 @@ export default {
           formData,
           { 
             headers: { 
-              Authorization: `Bearer ${token}`,
+              Authorization: `Bearer ${useAuthStore.token}`,
               'Content-Type': 'multipart/form-data'
             } 
           }

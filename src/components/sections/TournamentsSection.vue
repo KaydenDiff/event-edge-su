@@ -68,6 +68,7 @@
   import BaseButton from '@/components/BaseButton.vue'
   import TournamentForm from '@/components/form/TournamentForm.vue'
   import TournamentCard from '@/components/TournamentCard.vue'
+  import { useAuthStore } from '@/stores/auth'
 
   export default {
     name: 'TournamentsSection',
@@ -93,6 +94,7 @@
       const showDeleteDialog = ref(false)
       const tournamentToDelete = ref(null)
       const searchQuery = ref('')
+      const authStore = useAuthStore();
   
       // Вычисляемое свойство для активных команд
       const activeTeams = computed(() => {
@@ -102,10 +104,10 @@
       // Получение списка команд
       const fetchTeams = async () => {
         try {
-          const user = JSON.parse(localStorage.getItem('user'))
+          const authStore = useAuthStore();
           const response = await axios.get('http://event-edge-su/api/guest/teams', {
             headers: {
-              'Authorization': `Bearer ${user.token}`
+              'Authorization': `Bearer ${authStore.accessToken}`
             }
           })
           teams.value = response.data.data
@@ -118,10 +120,10 @@
       // Получение списка игр
       const fetchGames = async () => {
         try {
-          const user = JSON.parse(localStorage.getItem('user'))
+          const authStore = useAuthStore();
           const response = await axios.get('http://event-edge-su/api/guest/games', {
             headers: {
-              'Authorization': `Bearer ${user.token}`
+              'Authorization': `Bearer ${authStore.accessToken}`
             }
           })
           games.value = response.data
@@ -134,10 +136,10 @@
       // Получение списка стадий
       const fetchStages = async () => {
         try {
-          const user = JSON.parse(localStorage.getItem('user'))
+          const authStore = useAuthStore();
           const response = await axios.get('http://event-edge-su/api/guest/stage-type', {
             headers: {
-              'Authorization': `Bearer ${user.token}`
+              'Authorization': `Bearer ${authStore.accessToken}`
             }
           })
           stages.value = response.data.data
@@ -150,19 +152,16 @@
       // Получение списка турниров
       const fetchTournaments = async () => {
         try {
-          loading.value = true
-          const user = JSON.parse(localStorage.getItem('user'))
+          loading.value = true;
           const response = await axios.get('http://event-edge-su/api/guest/tournaments', {
-            headers: {
-              'Authorization': `Bearer ${user.token}`
-            }
-          })
-          tournaments.value = response.data
+            headers: { Authorization: `Bearer ${authStore.accessToken}` }
+          });
+          tournaments.value = response.data;
         } catch (err) {
-          console.error('Ошибка загрузки турниров:', err)
-          error.value = 'Ошибка при загрузке турниров'
+          error.value = 'Ошибка загрузки турниров';
+          console.error('Ошибка загрузки:', err);
         } finally {
-          loading.value = false
+          loading.value = false;
         }
       }
   
@@ -174,62 +173,62 @@
       })
   
       // Обработка отправки формы турнира
-      const handleTournamentSubmit = async (formData) => {
+      const handleTournamentSubmit = async (tournamentData) => {
         try {
-          error.value = null
-          const user = JSON.parse(localStorage.getItem('user'))
+          error.value = null;
           
-      
-          
-          // Создаем новый FormData объект
-          const submissionData = new FormData()
-          
-          // Добавляем все поля в FormData
-          if (formData && typeof formData === 'object' && !formData.isTrusted) {
-            // Добавляем основные поля
-            if (formData.name) submissionData.append('name', formData.name)
-            if (formData.description) submissionData.append('description', formData.description)
-            if (formData.game_id) submissionData.append('game_id', formData.game_id)
-            if (formData.stage_id) submissionData.append('stage_id', formData.stage_id)
-            if (formData.status) submissionData.append('status', formData.status)
-            if (formData.start_date) submissionData.append('start_date', formData.start_date)
-            if (formData.end_date) submissionData.append('end_date', formData.end_date)
-            
-            // Добавляем команды
-            if (formData.teams && Array.isArray(formData.teams)) {
-              formData.teams.forEach(teamId => {
-                submissionData.append('teams[]', teamId)
-              })
-            }
-            
-            // Добавляем изображение
-            if (formData.image instanceof File) {
-              submissionData.append('image', formData.image)
-            }
-            
-            // Логируем данные перед отправкой
-            const formDataObj = {}
-            for (let [key, value] of submissionData.entries()) {
-              formDataObj[key] = value
-            }
-            
-            const response = await axios.post(
-              'http://event-edge-su/api/admin/tournaments/create', 
-              submissionData,
+          if (!authStore.accessToken) {
+            error.value = 'Не авторизован';
+            return;
+          }
+
+          const isEditing = editingTournament.value !== null;
+          const tournamentId = editingTournament.value?.id;
+
+          const requestData = {
+            name: tournamentData.name,
+            description: tournamentData.description,
+            game_id: tournamentData.game_id,
+            stage_id: tournamentData.stage_id,
+            status: tournamentData.status,
+            start_date: tournamentData.start_date,
+            end_date: tournamentData.end_date,
+            teams: tournamentData.teams,
+            image: tournamentData.image
+          };
+
+          let response;
+          if (isEditing && tournamentId) {
+            response = await axios.post(
+              `http://event-edge-su/api/admin/tournaments/update/${tournamentId}`,
+              requestData,
               {
-                headers: {
-                  'Authorization': `Bearer ${user.token}`,
-                  'Content-Type': 'multipart/form-data'
+                headers: { 
+                  'Authorization': `Bearer ${authStore.accessToken}`,
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json'
                 }
               }
-            )
-
-            // Обновляем список турниров
-            await fetchTournaments()
-            
-            // Закрываем форму
-            showTournamentForm.value = false
+            );
+          } else {
+            response = await axios.post(
+              'http://event-edge-su/api/admin/tournaments/create',
+              requestData,
+              {
+                headers: { 
+                  'Authorization': `Bearer ${authStore.accessToken}`,
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json'
+                }
+              }
+            );
           }
+
+          // Обновляем список турниров
+          await fetchTournaments()
+          
+          // Закрываем форму
+          showTournamentForm.value = false
         } catch (err) {
           console.error('Ошибка создания турнира:', err)
           error.value = err.response?.data?.message || 'Ошибка при создании турнира'
@@ -245,30 +244,26 @@
       // Удаление турнира
       const confirmDelete = async () => {
         try {
-          const user = JSON.parse(localStorage.getItem('user'))
-          if (!user?.token) throw new Error('Требуется авторизация')
-
-          const response = await axios.delete(
-            `http://event-edge-su/api/admin/tournaments/delete/${tournamentToDelete.value.id}`,
-            {
-              headers: {
-                'Authorization': `Bearer ${user.token}`
-              }
-            }
-          )
-
-          // Проверяем успешность операции (200 - успешное удаление)
-          if (response.status === 200 && response.data.message === "Турнир успешно удален") {
-            // Удаляем турнир из списка
-            tournaments.value = tournaments.value.filter(
-              t => t.id !== tournamentToDelete.value.id
-            )
-            // Закрываем диалог подтверждения
-            showDeleteDialog.value = false
-            tournamentToDelete.value = null
-          } else {
-            throw new Error('Ошибка при удалении турнира')
+          if (!authStore.accessToken) {
+            throw new Error('Не авторизован');
           }
+
+          const tournamentIdToDelete = tournamentToDelete.value?.id;
+          if (!tournamentIdToDelete) {
+            throw new Error('ID турнира не найден');
+          }
+
+          await axios.delete(`http://event-edge-su/api/admin/tournaments/delete/${tournamentIdToDelete}`, {
+            headers: { Authorization: `Bearer ${authStore.accessToken}` }
+          });
+
+          // Удаляем турнир из списка
+          tournaments.value = tournaments.value.filter(
+            t => t.id !== tournamentToDelete.value.id
+          )
+          // Закрываем диалог подтверждения
+          showDeleteDialog.value = false
+          tournamentToDelete.value = null
         } catch (err) {
           console.error('Ошибка удаления турнира:', err)
           error.value = err.response?.data?.message || 'Ошибка при удалении турнира'

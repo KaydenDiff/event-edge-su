@@ -67,55 +67,52 @@
   </template>
   
   <script>
+  import { ref, computed, onMounted } from 'vue';
   import BaseButton from '@/components/BaseButton.vue';
   import MatchCard from '@/components/MatchCard.vue';
-  
+  import { useAuthStore } from '@/stores/auth'
+  import router from '@/router';
   export default {
     name: 'MatchSection',
     components: {
       BaseButton,
       MatchCard
     },
-    data() {
-      return {
-        matches: [],
-        tournaments: [],
-        teams: [],
-        stages: [],
-        bracketMatchesByTournament: {},
-        showCreateMatchForm: false,
-        showDeleteDialog: false,
-        matchToDelete: null,
-        newMatch: {
-          tournament_id: '',
-          team_1_id: '',
-          team_2_id: '',
-          match_date: '',
-          status: 'pending',
-          winner_team_id: '',
-          stage_id: ''
+    setup() {
+      const authStore = useAuthStore();
+      const matches = ref([]);
+      const tournaments = ref([]);
+      const teams = ref([]);
+      const stages = ref([]);
+      const bracketMatchesByTournament = ref({});
+      const showCreateMatchForm = ref(false);
+      const showDeleteDialog = ref(false);
+      const matchToDelete = ref(null);
+      const loading = ref(false);
+      const error = ref(null);
+      const newMatch = ref({
+        tournament_id: '',
+        team_1_id: '',
+        team_2_id: '',
+        match_date: '',
+        status: 'pending',
+        winner_team_id: '',
+        stage_id: ''
+      });
+
+      const filteredTeams = computed(() => teams.value.filter(team => team.status === 'active'));
+
+      const handleTournamentChange = async (newVal) => {
+        if (newVal) {
+          await fetchTeamsForTournament(newVal);
+          newMatch.value.team_1_id = '';
+          newMatch.value.team_2_id = '';
+        } else {
+          teams.value = [];
         }
       };
-    },
-    computed: {
-      filteredTeams() {
-        return this.teams.filter(team => team.status === 'active');
-      }
-    },
-    watch: {
-      'newMatch.tournament_id': 'handleTournamentChange'
-    },
-    methods: {
-      async handleTournamentChange(newVal) {
-        if (newVal) {
-          await this.fetchTeamsForTournament(newVal);
-          this.newMatch.team_1_id = '';
-          this.newMatch.team_2_id = '';
-        } else {
-          this.teams = [];
-        }
-      },
-      async fetchTeamsForTournament(tournamentId) {
+
+      const fetchTeamsForTournament = async (tournamentId) => {
         try {
           if (!tournamentId) return;
           
@@ -123,60 +120,66 @@
           if (!res.ok) throw new Error('Ошибка загрузки команд');
           
           const data = await res.json();
-          this.teams = [...this.teams, ...(data.teams || [])];
+          teams.value = [...teams.value, ...(data.teams || [])];
         } catch (e) {
           console.error('Ошибка загрузки команд:', e);
         }
-      },
-      async fetchAllData() {
+      };
+
+      const fetchAllData = async () => {
         try {
           await Promise.all([
-            this.fetchTournaments(),
-            this.fetchStages(),
-            this.fetchMatches()
+            fetchTournaments(),
+            fetchStages(),
+            fetchMatches()
           ]);
           
-          await this.fetchBracketDataForAllTournaments();
+          await fetchBracketDataForAllTournaments();
         } catch (error) {
           console.error('Ошибка при загрузке данных:', error);
         }
-      },
-      async fetchTournaments() {
+      };
+
+      const fetchTournaments = async () => {
         try {
           const res = await fetch('http://event-edge-su/api/guest/tournaments');
-          this.tournaments = await res.json();
+          tournaments.value = await res.json();
         } catch (e) {
           console.error('Ошибка загрузки турниров:', e);
         }
-      },
-      async fetchStages() {
+      };
+
+      const fetchStages = async () => {
         try {
           const res = await fetch('http://event-edge-su/api/guest/stages');
-          this.stages = await res.json();
+          stages.value = await res.json();
         } catch (e) {
           console.error('Ошибка загрузки стадий:', e);
         }
-      },
-      async fetchMatches() {
-        try {
-          const res = await fetch('http://event-edge-su/api/guest/game-matches');
-          this.matches = await res.json();
-        } catch (e) {
-          console.error('Ошибка загрузки матчей:', e);
-        }
-      },
-      async fetchBracketDataForAllTournaments() {
-        const user = JSON.parse(localStorage.getItem('user'));
-        if (!user || !user.token) return;
+      };
 
-        const uniqueTournamentIds = [...new Set(this.matches.map(match => match.tournament_id))];
+      const fetchMatches = async () => {
+        try {
+          loading.value = true;
+          const response = await fetch('http://event-edge-su/api/guest/game-matches', {
+            headers: { Authorization: `Bearer ${authStore.accessToken}` }
+          });
+          matches.value = await response.json();
+        } catch (err) {
+          error.value = 'Ошибка загрузки матчей';
+          console.error('Ошибка загрузки:', err);
+        } finally {
+          loading.value = false;
+        }
+      };
+
+      const fetchBracketDataForAllTournaments = async () => {
+        const uniqueTournamentIds = [...new Set(matches.value.map(match => match.tournament_id))];
         
         const fetchPromises = uniqueTournamentIds.map(async (tournamentId) => {
           try {
             const response = await fetch(`http://event-edge-su/api/guest/tournaments/${tournamentId}/basket`, {
-              headers: {
-                'Authorization': `Bearer ${user.token}`
-              }
+              headers: { Authorization: `Bearer ${authStore.accessToken}` }
             });
             
             if (!response.ok) {
@@ -184,39 +187,41 @@
             }
             
             const data = await response.json();
-            this.bracketMatchesByTournament[tournamentId] = data || [];
+            bracketMatchesByTournament.value[tournamentId] = data || [];
           } catch (error) {
             console.error(`Ошибка при загрузке сетки для турнира ${tournamentId}:`, error);
-            this.bracketMatchesByTournament[tournamentId] = [];
+            bracketMatchesByTournament.value[tournamentId] = [];
           }
         });
 
         await Promise.all(fetchPromises);
-      },
-      handleMatchAdded() {
-        // Refresh bracket data for all tournaments after a match is added
-        this.fetchBracketDataForAllTournaments();
-      },
-      async createMatch() {
-        const user = JSON.parse(localStorage.getItem('user'));
-        if (!user || !user.token) {
-          console.error('Токен не найден');
-          return;
-        }
-  
+      };
+
+      const handleMatchAdded = () => {
+        fetchBracketDataForAllTournaments();
+      };
+
+      const createMatch = async () => {
         try {
+          error.value = null;
+          
+          if (!authStore.accessToken) {
+            error.value = 'Не авторизован';
+            return;
+          }
+
           const res = await fetch('http://event-edge-su/api/admin/game-matches/create', {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${user.token}`,
+              Authorization: `Bearer ${authStore.accessToken}`,
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify(this.newMatch)
+            body: JSON.stringify(newMatch.value)
           });
   
           if (!res.ok) throw new Error('Ошибка при создании матча');
   
-          this.newMatch = {
+          newMatch.value = {
             tournament_id: '',
             team_1_id: '',
             team_2_id: '',
@@ -225,64 +230,104 @@
             winner_team_id: '',
             stage_id: ''
           };
-          this.showCreateMatchForm = false;
-          await this.fetchMatches();
-        } catch (e) {
-          console.error('Ошибка создания матча:', e);
+          showCreateMatchForm.value = false;
+          await fetchMatches();
+        } catch (err) {
+          error.value = 'Ошибка создания матча';
+          console.error('Ошибка создания матча:', err);
         }
-      },
-      getTournamentName(tournamentId) {
-        const tournament = this.tournaments.find(t => t.id === tournamentId);
+      };
+
+      const getTournamentName = (tournamentId) => {
+        const tournament = tournaments.value.find(t => t.id === tournamentId);
         return tournament ? tournament.name : 'Неизвестный турнир';
-      },
-      getBracketMatchesForTournament(tournamentId) {
-        return this.bracketMatchesByTournament[tournamentId] || [];
-      },
-      getTeamName(teamId) {
-        const team = this.teams.find(t => t.id === teamId);
+      };
+
+      const getBracketMatchesForTournament = (tournamentId) => {
+        return bracketMatchesByTournament.value[tournamentId] || [];
+      };
+
+      const getTeamName = (teamId) => {
+        const team = teams.value.find(t => t.id === teamId);
         return team ? team.name : 'Неизвестная команда';
-      },
-      showDeleteConfirmation(match) {
-        this.matchToDelete = match;
-        this.fetchTeamsForTournament(match.tournament_id).then(() => {
-          this.showDeleteDialog = true;
+      };
+
+      const showDeleteConfirmation = (match) => {
+        matchToDelete.value = match;
+        fetchTeamsForTournament(match.tournament_id).then(() => {
+          showDeleteDialog.value = true;
         });
-      },
-      async confirmDelete() {
-        if (!this.matchToDelete) return;
-  
-        const user = JSON.parse(localStorage.getItem('user'));
-        if (!user || !user.token) return;
-  
+      };
+
+      const confirmDelete = async () => {
         try {
-          const res = await fetch(`http://event-edge-su/api/admin/game-matches/delete/${this.matchToDelete.id}`, {
+          if (!authStore.accessToken) {
+            throw new Error('Не авторизован');
+          }
+
+          const matchIdToDelete = matchToDelete.value?.id;
+          if (!matchIdToDelete) {
+            throw new Error('ID матча не найден');
+          }
+
+          await fetch(`http://event-edge-su/api/admin/game-matches/delete/${matchIdToDelete}`, {
             method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${user.token}`,
-              'Content-Type': 'application/json'
-            }
+            headers: { Authorization: `Bearer ${authStore.accessToken}` }
           });
-  
-          if (!res.ok) throw new Error('Ошибка удаления матча');
-  
-          this.matches = this.matches.filter(match => match.id !== this.matchToDelete.id);
-        } catch (e) {
-          console.error('Ошибка удаления матча:', e);
+
+          matches.value = matches.value.filter(match => match.id !== matchIdToDelete);
+        } catch (error) {
+          error.value = 'Ошибка удаления матча';
+          console.error('Ошибка удаления матча:', error);
         } finally {
-          this.showDeleteDialog = false;
-          this.matchToDelete = null;
+          showDeleteDialog.value = false;
+          matchToDelete.value = null;
         }
-      },
-      cancelDelete() {
-        this.showDeleteDialog = false;
-        this.matchToDelete = null;
-      },
-      editMatch(id) {
-        this.$router.push({ name: 'EditMatch', params: { id } });
-      }
-    },
-    mounted() {
-      this.fetchAllData();
+      };
+
+      const cancelDelete = () => {
+        showDeleteDialog.value = false;
+        matchToDelete.value = null;
+      };
+
+      const editMatch = (id) => {
+        router.push({ name: 'EditMatch', params: { id } });
+      };
+
+      // Добавляем onMounted хук
+      onMounted(() => {
+        fetchAllData();
+      });
+
+      return {
+        matches,
+        tournaments,
+        teams,
+        stages,
+        bracketMatchesByTournament,
+        showCreateMatchForm,
+        showDeleteDialog,
+        matchToDelete,
+        newMatch,
+        filteredTeams,
+        handleTournamentChange,
+        fetchTeamsForTournament,
+        fetchAllData,
+        fetchTournaments,
+        fetchStages,
+        fetchMatches,
+        fetchBracketDataForAllTournaments,
+        handleMatchAdded,
+        createMatch,
+        getTournamentName,
+        getBracketMatchesForTournament,
+        getTeamName,
+        showDeleteConfirmation,
+        confirmDelete,
+        cancelDelete,
+        editMatch,
+        error
+      };
     }
   };
   </script>

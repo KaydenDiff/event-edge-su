@@ -70,7 +70,7 @@ import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import BaseButton from '@/components/BaseButton.vue'
 import UserForm from '@/components/form/UserForm.vue'
-
+import { useAuthStore } from '@/stores/auth'
 export default {
   name: 'UsersSection',
   components: {
@@ -96,11 +96,9 @@ export default {
     const fetchUsers = async () => {
       try {
         loading.value = true
-        const user = JSON.parse(localStorage.getItem('user'))
+        const authStore = useAuthStore();
         const response = await axios.get('http://event-edge-su/api/admin/users', {
-          headers: {
-            'Authorization': `Bearer ${user.token}`
-          }
+        headers: { Authorization: `Bearer ${authStore.accessToken}` }
         })
         users.value = response.data
       } catch (err) {
@@ -116,8 +114,8 @@ export default {
       try {
         error.value = null // Сбрасываем ошибки в начале метода
         
-        const user = JSON.parse(localStorage.getItem('user'))
-        if (!user?.token) {
+        const authStore = useAuthStore();
+        if (!authStore.accessToken) {
           error.value = 'Не авторизован'
           return
         }
@@ -164,7 +162,7 @@ export default {
             requestData,
             {
               headers: { 
-                'Authorization': `Bearer ${user.token}`,
+                'Authorization': `Bearer ${authStore.accessToken}`,
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
               }
@@ -177,7 +175,7 @@ export default {
             requestData,
             {
               headers: { 
-                'Authorization': `Bearer ${user.token}`,
+                'Authorization': `Bearer ${authStore.accessToken}`,
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
               }
@@ -211,8 +209,8 @@ export default {
     // Удаление пользователя
     const confirmDelete = async () => {
       try {
-        const user = JSON.parse(localStorage.getItem('user'))
-        if (!user?.token) {
+        const authStore = useAuthStore();
+        if (!authStore.accessToken) {
           throw new Error('Не авторизован')
         }
 
@@ -222,7 +220,7 @@ export default {
         }
 
         await axios.delete(`http://event-edge-su/api/admin/users/delete/${userIdToDelete}`, {
-          headers: { Authorization: `Bearer ${user.token}` }
+          headers: { Authorization: `Bearer ${authStore.accessToken}` }
         })
 
         // Обновляем список пользователей

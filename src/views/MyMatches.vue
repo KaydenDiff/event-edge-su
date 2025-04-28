@@ -89,14 +89,15 @@ export default {
       error.value = null;
 
       try {
-        const user = JSON.parse(localStorage.getItem("user"));
-        if (!user || !user.token) {
+        const authStore = useAuthStore();
+        const token = authStore.accessToken;
+        if (!token) {
           console.error("Токен не найден");
           return;
         }
         const response = await axios.get('http://event-edge-su/api/my-matches', {
           headers: {
-            Authorization: `Bearer ${user.token}`,
+            'Authorization': `Bearer ${token}`,
           }
         });
 

@@ -84,7 +84,7 @@ export default {
 
       try {
         const authStore = useAuthStore();
-        const token = authStore.user?.token;
+        const token = authStore.accessToken;
 
         const response = await axios.get("http://event-edge-su/api/my-profile", {
           headers: { Authorization: `Bearer ${token}` }

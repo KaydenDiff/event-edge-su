@@ -155,6 +155,7 @@ import UsersSection from '@/components/sections/UsersSection.vue';
 import NotificationSection from '@/components/sections/NotificationSection.vue';
 import { ref } from 'vue';
 import axios from 'axios';
+import { useAuthStore } from '@/stores/auth';
 
 export default {
   name: 'AdminPanel',
@@ -252,8 +253,8 @@ export default {
     async deleteTournament(id) {
       if (!confirm('Вы уверены, что хотите удалить турнир?')) return;
 
-      const user = JSON.parse(localStorage.getItem('user'));
-      if (!user || !user.token) {
+      const authStore = useAuthStore();
+      if (!authStore.accessToken) {
         console.error('Токен не найден');
         return;
       }
@@ -262,7 +263,7 @@ export default {
         const response = await fetch(`http://event-edge-su/api/admin/tournaments/delete/${id}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${user.token}`,
+            'Authorization': `Bearer ${authStore.accessToken}`,
             'Content-Type': 'application/json',
           },
         });

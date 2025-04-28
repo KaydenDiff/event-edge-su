@@ -111,71 +111,74 @@
           </div>
         </div>
       </div>
+
     </div>
   </template>
   
-  <script>
-  import { useRoute } from 'vue-router';
-  import { computed, ref } from 'vue';
+  <script setup>
+  import { ref, computed } from 'vue';
+  import { useRoute, useRouter } from 'vue-router';
+  import { useAuthStore } from '@/stores/auth';
 
-  export default {
-    name: 'Bar',
-    props: {
-      showGamesSection: {
-        type: Boolean,
-        default: false
-      },
-      games: {
-        type: Array,
-        default: () => []
-      },
-      selectedGames: {
-        type: Array,
-        default: () => []
-      },
-      selectedMenu: {
-        type: String,
-        default: 'home'
-      },
-      isAdminRoute: {
-        type: Boolean,
-        default: false
-      }
+  const route = useRoute();
+  const router = useRouter();
+  const authStore = useAuthStore();
+
+  const isCollapsed = ref(false);
+  const showUserMenu = ref(false);
+
+  const isTournamentsPage = computed(() => route.path === '/tournaments');
+  const isTeamsPage = computed(() => route.path === '/teams');
+
+  const props = defineProps({
+    showGamesSection: {
+      type: Boolean,
+      default: false
     },
-    setup(props, { emit }) {
-      const route = useRoute();
-      const isCollapsed = ref(false);
-      
-      const isTournamentsPage = computed(() => {
-        return route.path === '/tournaments';
-      });
-
-      const isTeamsPage = computed(() => {
-        return route.path === '/teams';
-      });
-
-      const selectMenu = (section) => {
-        emit('menu-selected', section);
-      };
-
-      const toggleSidebar = () => {
-        isCollapsed.value = !isCollapsed.value;
-      };
-
-      return {
-        isTournamentsPage,
-        isTeamsPage,
-        selectMenu,
-        isCollapsed,
-        toggleSidebar
-      };
+    games: {
+      type: Array,
+      default: () => []
     },
-    methods: {
-      toggleGame(gameName) {
-        this.$emit('game-selected', gameName);
-      }
+    selectedGames: {
+      type: Array,
+      default: () => []
+    },
+    selectedMenu: {
+      type: String,
+      default: 'home'
+    },
+    isAdminRoute: {
+      type: Boolean,
+      default: false
     }
-  }
+  });
+
+  const emit = defineEmits(['game-selected', 'menu-selected']);
+
+  const toggleSidebar = () => {
+    isCollapsed.value = !isCollapsed.value;
+  };
+
+  const toggleUserMenu = () => {
+    showUserMenu.value = !showUserMenu.value;
+  };
+
+  const selectMenu = (section) => {
+    emit('menu-selected', section);
+  };
+
+  const toggleGame = (gameName) => {
+    emit('game-selected', gameName);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await authStore.logout();
+      router.push('/login');
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+  };
   </script>
   
   <style scoped>
@@ -382,5 +385,63 @@
   .collapsed .game-filter-item {
     justify-content: center;
     padding: 12px;
+  }
+
+  .user-menu {
+    margin-top: auto;
+    padding: 20px 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .user-info:hover {
+    background: rgba(99, 1, 129, 0.2);
+  }
+
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .user-dropdown {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    width: 100%;
+    background: #1a1a1a;
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    z-index: 1000;
+  }
+
+  .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    color: #fff;
+    text-decoration: none;
+    transition: all 0.3s ease;
+  }
+
+  .dropdown-item:hover {
+    background: rgba(99, 1, 129, 0.2);
+  }
+
+  .dropdown-item i {
+    width: 20px;
+    text-align: center;
   }
   </style> 
