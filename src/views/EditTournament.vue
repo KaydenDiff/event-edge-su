@@ -245,99 +245,116 @@ export default {
 
 <style scoped>
 .edit-tournament-container {
-  max-width: 600px;
-  margin: 70px auto;
-  padding: 25px;
-  background: #ffffff;
-  border-radius: 10px;
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+  max-width: 800px;
+  margin: 100px auto;
+  padding: 30px;
+  background: linear-gradient(145deg, #2c2c2c, #1a1a1a);
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(182, 0, 254, 0.1);
 }
 
 h2 {
   text-align: center;
-  color: #333;
-  font-size: 24px;
-  margin-bottom: 20px;
+  color: #ffffff;
+  font-size: 28px;
+  margin-bottom: 25px;
+  font-weight: 600;
 }
 
 .edit-tournament-form {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 20px;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
+  gap: 8px;
 }
 
 label {
   font-weight: 600;
   margin-bottom: 5px;
-  color: #444;
+  color: #ffffff;
+  font-size: 16px;
 }
 
 .input-field {
-  padding: 12px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
+  padding: 14px;
+  border: 1px solid rgba(182, 0, 254, 0.2);
+  border-radius: 8px;
   font-size: 16px;
-  transition: 0.3s ease-in-out;
-  background-color: #f9f9f9;
+  transition: all 0.3s ease;
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
 }
 
 .input-field:focus {
-  border-color: #000000;
+  border-color: #630181;
   outline: none;
-  background-color: #fff;
+  box-shadow: 0 0 10px rgba(182, 0, 254, 0.2);
 }
 
 textarea {
-  min-height: 100px;
+  min-height: 120px;
   resize: vertical;
 }
 
 .btn-submit {
-  background-color: #ffffff;
-  color: #000000;
-  padding: 8px 20px;
+  background: linear-gradient(45deg, #630181, #9500ff);
+  color: #ffffff;
+  padding: 14px 28px;
   border-radius: 8px;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: bold;
   transition: all 0.3s ease-in-out;
   outline: none;
-  border: 3px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 10px 10px rgba(0, 0, 0, 0.1);
-  position: relative;
-  overflow: hidden;
-  z-index: 1;
-  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.btn-submit::before {
+  content: "\f0c7"; /* Save icon */
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
 }
 
 .btn-submit:hover {
-  animation: pulseBorder 1.5s infinite ease-in-out;
-  transform: scale(1.05);
-  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
 }
 
 .btn-submit:active {
-  transform: scale(0.95);
-}
-
-@keyframes pulseBorder {
-  0% { border-color: rgba(255, 255, 255, 0.5); }
-  50% { border-color: rgba(255, 255, 255, 1); }
-  100% { border-color: rgba(255, 255, 255, 0.5); }
+  transform: translateY(1px);
 }
 
 @media (max-width: 768px) {
   .edit-tournament-container {
     max-width: 90%;
     padding: 20px;
+    margin: 80px auto;
+  }
+  
+  h2 {
+    font-size: 24px;
+  }
+  
+  .btn-submit {
+    padding: 12px 24px;
+    font-size: 16px;
   }
 }
+
 .image-preview {
-  margin-top: 10px;
+  margin-top: 15px;
   text-align: center;
 }
 
@@ -346,20 +363,20 @@ textarea {
   max-width: 100%;
   height: auto;
   border-radius: 10px;
-  padding: 5px;
-  background-color: #fff;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  border: 3px solid rgba(255, 255, 255, 0.5); /* Добавляем рамку */
-  animation: pulseBorder1 1.5s infinite ease-in-out;
+  object-fit: cover;
+  border: 2px solid #630181;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
 }
+
+.image-preview img:hover {
+  transform: scale(1.02);
+}
+
 .file-info {
   font-size: 14px;
-  color: #555;
-  margin-top: 5px;
-}
-@keyframes pulseBorder1 {
-  0% { border-color: rgba(0, 0, 0, 0.2); }
-  50% { border-color: rgba(0, 0, 0, 1); }
-  100% { border-color: rgba(0, 0, 0, 0.2); }
+  color: #d0d0d0;
+  margin-top: 8px;
+  font-style: italic;
 }
 </style>

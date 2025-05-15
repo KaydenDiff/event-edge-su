@@ -22,12 +22,18 @@ import EditMatch from '@/components/EditMatch.vue';
 import HelpView from '@/views/Help.vue';
 import AccessDenied from '@/views/AccessDenied.vue';
 import NotFound from '@/views/NotFound.vue';
+import Teams from '@/views/Teams.vue';
 import { useAuthStore } from '@/stores/auth'
+import NotificationsPage from '@/views/Notifications.vue'
+import NewsFeeds from '@/views/NewsFeeds.vue';
+import TeamsRequestTournament from '@/views/TeamsRequestTournament.vue';
+import NewsDetails from '@/views/NewsDetails.vue';
 
 const routes = [
   { path: '/', name: 'home', component: HomeView },
   { path: '/help', name: 'help', component: HelpView },
   { path: '/tournaments', component: Tournaments },
+  { path: '/teams', name: 'teams', component: Teams },
   {
     path: '/tournaments/:id',
     name: 'TournamentDetails',
@@ -38,6 +44,13 @@ const routes = [
     path: '/edit-match/:id',
     name: 'EditMatch',
     component: EditMatch,
+    props: true,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/tournament/:id/requests',
+    name: 'TeamsRequestTournament',
+    component: TeamsRequestTournament,
     props: true,
     meta: { requiresAuth: true }
   },
@@ -84,7 +97,7 @@ const routes = [
   },
   { 
     path: '/notifications', 
-    component: Notifications,
+    component: NotificationsPage,
     meta: { requiresAuth: true }
   },
   {
@@ -99,12 +112,19 @@ const routes = [
     component: OrganizerDashboard,
     meta: { requiresAuth: true }
   },
+  
   {
-    path: '/admin/tournaments',
-    name: 'AdminTournaments',
-    component: AdminTournaments,
-    meta: { requiresAuth: true, requiresAdmin: true }
+    path: '/news-feeds',
+    name: 'NewsFeeds',
+    component: NewsFeeds
   },
+  {
+    path: '/news/:slug',
+    name: 'NewsDetails',
+    component: NewsDetails,
+    props: true
+  },
+
   { 
     path: '/login',  
     name: 'login',
@@ -155,9 +175,9 @@ const router = createRouter({
 
 // Глобальный защитник маршрутов
 router.beforeEach((to, from, next) => {
-  const authStore = useAuthStore();
-  const isAuthenticated = authStore.isAuthenticated;
-  const isAdmin = authStore.user?.role === 'admin';
+  const userData = JSON.parse(localStorage.getItem('user') || '{}');
+  const isAuthenticated = userData.token;
+  const isAdmin = userData.role === 'Администратор';
 
   // Проверка для страниц, требующих авторизации
   if (to.meta.requiresAuth && !isAuthenticated) {

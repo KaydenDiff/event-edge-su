@@ -20,7 +20,15 @@
         <h2>Предстоящие турниры</h2>
         <div v-if="upcomingTournaments.length > 0" class="tournament-list">
           <div v-for="tournament in upcomingTournaments" :key="tournament.id" class="tournament-card">
-            <h3>{{ tournament.name }}</h3>
+            <div class="tournament-header">
+              <h3>{{ tournament.name }}</h3>
+              <router-link 
+  :to="`/tournament/${tournament.id}/requests`" 
+  class="details-button"
+>
+  Заявки
+</router-link>
+            </div>
             <p><strong>Описание:</strong> {{ tournament.description }}</p>
             <p><strong>Дата начала:</strong> {{ tournament.start_date }}</p>
             <p><strong>Дата окончания:</strong> {{ tournament.end_date }}</p>
@@ -41,7 +49,15 @@
         <h2>Завершённые турниры</h2>
         <div v-if="pastTournaments.length > 0" class="tournament-list">
           <div v-for="tournament in pastTournaments" :key="tournament.id" class="tournament-card completed">
-            <h3>{{ tournament.name }}</h3>
+            <div class="tournament-header">
+              <h3>{{ tournament.name }}</h3>
+              <router-link 
+                :to="`/tournament-details/${tournament.id}`" 
+                class="details-button"
+              >
+                Подробнее
+              </router-link>
+            </div>
             <p><strong>Описание:</strong> {{ tournament.description }}</p>
             <p><strong>Дата начала:</strong> {{ tournament.start_date }}</p>
             <p><strong>Дата окончания:</strong> {{ tournament.end_date }}</p>
@@ -77,13 +93,11 @@ export default {
     const loading = ref(true);
     const error = ref(null);
 
-    // Функция для изменения таба
     const changeTab = (tab) => {
       router.push({ path: '/my-tournaments', query: { tab } });
       activeTab.value = tab;
     };
 
-    // Следим за изменениями URL
     watch(() => route.query.tab, (newTab) => {
       if (newTab && ['upcoming', 'completed'].includes(newTab)) {
         activeTab.value = newTab;
@@ -118,7 +132,6 @@ export default {
     };
 
     onMounted(() => {
-      // Устанавливаем начальный таб из URL при монтировании
       if (route.query.tab && ['upcoming', 'completed'].includes(route.query.tab)) {
         activeTab.value = route.query.tab;
       }
@@ -142,7 +155,6 @@ export default {
   max-width: 800px;
   margin: 20px auto;
   padding: 20px;
-  background: #000000;
   border-radius: 8px;
   box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
   text-align: center;

@@ -132,7 +132,6 @@ export default {
 .register-container {
   padding: 30px 20px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #000;
   color: #fff;
   min-height: 100vh;
   display: flex;

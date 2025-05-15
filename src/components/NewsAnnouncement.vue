@@ -35,20 +35,20 @@ export default {
 
 <style scoped>
 .news-announcement {
-  margin: 80px auto;
-  padding: 0 20px;
+  margin: 2rem auto;
+  padding: 0 1rem;
   max-width: 1000px;
 }
 
 .announcement-content {
   position: relative;
-  padding: 40px;
-  background: linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(38, 38, 38, 0.95) 100%);
-  border-radius: 16px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  padding: 2rem;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+  border-radius: 10px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
   display: flex;
   align-items: center;
-  gap: 40px;
+  gap: 2rem;
   overflow: hidden;
 }
 
@@ -64,8 +64,8 @@ export default {
 
 .icon-container {
   flex-shrink: 0;
-  width: 80px;
-  height: 80px;
+  width: 60px;
+  height: 60px;
   background: rgba(182, 0, 254, 0.1);
   border-radius: 50%;
   display: flex;
@@ -75,7 +75,7 @@ export default {
 }
 
 .icon-container i {
-  font-size: 32px;
+  font-size: 24px;
 }
 
 .text-content {
@@ -83,15 +83,15 @@ export default {
 }
 
 .announcement-title {
-  font-size: 28px;
+  font-size: 2rem;
   font-weight: 600;
-  margin-bottom: 12px;
+  margin-bottom: 0.5rem;
   color: #ffffff;
   line-height: 1.3;
 }
 
 .announcement-text {
-  font-size: 16px;
+  font-size: 1rem;
   color: rgba(255, 255, 255, 0.8);
   margin-bottom: 0;
   line-height: 1.6;
@@ -105,12 +105,12 @@ export default {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 24px;
+  padding: 1rem 2rem;
   background: #630181;
   color: white;
   border: none;
-  border-radius: 8px;
-  font-size: 16px;
+  border-radius: 5px;
+  font-size: 1rem;
   font-weight: 500;
   text-decoration: none;
   transition: all 0.3s ease;
@@ -123,27 +123,53 @@ export default {
 }
 
 .github-button i {
-  font-size: 20px;
+  font-size: 1.5rem;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
+  .news-announcement {
+    display: flex;
+    justify-content: center;
+  }
+
   .announcement-content {
     flex-direction: column;
     text-align: center;
-    padding: 30px 20px;
-    gap: 20px;
+    padding: 1rem;
+    gap: 1rem;
+    width: 70%;
   }
 
   .icon-container {
     margin: 0 auto;
+    width: 50px;
+    height: 50px;
+  }
+
+  .icon-container i {
+    font-size: 20px;
   }
 
   .announcement-title {
-    font-size: 24px;
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
   }
 
   .announcement-text {
-    font-size: 15px;
+    font-size: 0.9rem;
+  }
+
+  .download-buttons {
+    margin-top: 0.5rem;
+  }
+
+  .github-button {
+    padding: 0.8rem 1.5rem;
+    font-size: 0.9rem;
+  }
+
+  .github-button i {
+    font-size: 1.2rem;
   }
 }
 </style>

@@ -1,109 +1,177 @@
 <template>
   <div class="notification-section">
-    <h3>Отправка уведомлений</h3>
+    <h2 class="section-title">
+      <i class="fas fa-bell"></i> Отправка уведомлений
+    </h2>
     
-    <!-- Выбор типа уведомления -->
-    <div class="notification-type-selector">
-      <label>Выберите тип уведомления:</label>
-      <select v-model="selectedNotificationType" @change="handleNotificationTypeChange" class="select-field">
-        <option value="">Выберите тип</option>
-        <option value="tournament-start">Старт турнира</option>
-        <option value="match-reschedule">Перенос матча</option>
-        <option value="match-result">Результат матча</option>
-        <option value="next-stage">Переход на следующий этап</option>
-        <option value="team-elimination">Выбывание команды</option>
-        <option value="team-registration">Регистрация команды</option>
-        <option value="team-registration-accept">Принятие заявки команды</option>
-      </select>
+    <div class="notification-card">
+      <!-- Выбор типа уведомления -->
+      <div class="form-group">
+        <label for="notification-type">
+          <i class="fas fa-tag"></i> Выберите тип уведомления:
+        </label>
+        <select 
+          id="notification-type"
+          v-model="selectedNotificationType" 
+          @change="handleNotificationTypeChange" 
+          class="select-field"
+        >
+          <option value="">Выберите тип</option>
+          <option value="tournament-start">Старт турнира</option>
+          <option value="match-reschedule">Перенос матча</option>
+          <option value="match-result">Результат матча</option>
+          <option value="next-stage">Переход на следующий этап</option>
+          <option value="team-elimination">Выбывание команды</option>
+          <option value="team-registration">Регистрация команды</option>
+          <option value="team-registration-accept">Принятие заявки команды</option>
+        </select>
+      </div>
+
+      <!-- Форма для турнира -->
+      <div v-if="showTournamentSelect" class="form-group">
+        <label for="tournament-select">
+          <i class="fas fa-trophy"></i> Выберите турнир:
+        </label>
+        <select 
+          id="tournament-select"
+          v-model="selectedTournamentId" 
+          class="select-field"
+        >
+          <option value="">Выберите турнир</option>
+          <option v-for="tournament in tournaments" :key="tournament.id" :value="tournament.id">
+            {{ tournament.name }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Дополнительные поля в зависимости от типа уведомления -->
+      <div v-if="selectedNotificationType" class="additional-fields">
+        <!-- Поля для переноса матча -->
+        <div v-if="selectedNotificationType === 'match-reschedule'" class="form-group">
+          <label for="match-select">
+            <i class="fas fa-gamepad"></i> Выберите матч:
+          </label>
+          <select 
+            id="match-select"
+            v-model="additionalData.match_id" 
+            class="select-field"
+          >
+            <option value="">Выберите матч</option>
+            <option v-for="match in matches" :key="match.id" :value="match.id">
+              {{ formatMatchOption(match) }}
+            </option>
+          </select>
+          
+          <label for="new-time">
+            <i class="fas fa-clock"></i> Новое время:
+          </label>
+          <input 
+            id="new-time"
+            type="time" 
+            v-model="additionalData.new_time" 
+            class="input-field" 
+          />
+        </div>
+
+        <!-- Поля для результата матча -->
+        <div v-if="selectedNotificationType === 'match-result'" class="form-group">
+          <label for="match-result">
+            <i class="fas fa-poll"></i> Результат:
+          </label>
+          <input 
+            id="match-result"
+            type="text" 
+            v-model="additionalData.result" 
+            placeholder="Например: 2:1" 
+            class="input-field" 
+          />
+          
+          <label for="winner-team">
+            <i class="fas fa-medal"></i> Победившая команда:
+          </label>
+          <select 
+            id="winner-team"
+            v-model="additionalData.winner_team_id" 
+            class="select-field"
+          >
+            <option value="">Выберите команду</option>
+            <option v-for="team in teamsInMatch" :key="team.id" :value="team.id">
+              {{ team.name }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Поля для следующего этапа -->
+        <div v-if="selectedNotificationType === 'next-stage'" class="form-group">
+          <label for="team-select">
+            <i class="fas fa-users"></i> Команда:
+          </label>
+          <select 
+            id="team-select"
+            v-model="additionalData.team_id" 
+            class="select-field"
+          >
+            <option value="">Выберите команду</option>
+            <option v-for="team in teamsInTournament" :key="team.id" :value="team.id">
+              {{ team.name }}
+            </option>
+          </select>
+          
+          <label for="stage-select">
+            <i class="fas fa-layer-group"></i> Этап:
+          </label>
+          <select 
+            id="stage-select"
+            v-model="additionalData.stage_id" 
+            class="select-field"
+          >
+            <option value="">Выберите этап</option>
+            <option v-for="stage in stages" :key="stage.id" :value="stage.id">
+              {{ stage.name }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Поля для выбывания команды -->
+        <div v-if="selectedNotificationType === 'team-elimination'" class="form-group">
+          <label for="team-eliminate">
+            <i class="fas fa-user-slash"></i> Команда:
+          </label>
+          <select 
+            id="team-eliminate"
+            v-model="additionalData.team_id" 
+            class="select-field"
+          >
+            <option value="">Выберите команду</option>
+            <option v-for="team in teamsInTournament" :key="team.id" :value="team.id">
+              {{ team.name }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Кнопка отправки -->
+      <button 
+        @click="sendNotification" 
+        :disabled="!isFormValid"
+        class="send-button"
+        :class="{ 'disabled': !isFormValid }"
+      >
+        <i class="fas fa-paper-plane"></i>
+        Отправить уведомление
+      </button>
     </div>
-
-    <!-- Форма для турнира -->
-    <div v-if="showTournamentSelect" class="form-group">
-      <label>Выберите турнир:</label>
-      <select v-model="selectedTournamentId" class="select-field">
-        <option value="">Выберите турнир</option>
-        <option v-for="tournament in tournaments" :key="tournament.id" :value="tournament.id">
-          {{ tournament.name }}
-        </option>
-      </select>
-    </div>
-
-    <!-- Дополнительные поля в зависимости от типа уведомления -->
-    <div v-if="selectedNotificationType" class="additional-fields">
-      <!-- Поля для переноса матча -->
-      <div v-if="selectedNotificationType === 'match-reschedule'" class="form-group">
-        <label>Выберите матч:</label>
-        <select v-model="additionalData.match_id" class="select-field">
-          <option value="">Выберите матч</option>
-          <option v-for="match in matches" :key="match.id" :value="match.id">
-            {{ formatMatchOption(match) }}
-          </option>
-        </select>
-        <label>Новое время:</label>
-        <input type="time" v-model="additionalData.new_time" class="input-field" />
-      </div>
-
-      <!-- Поля для результата матча -->
-      <div v-if="selectedNotificationType === 'match-result'" class="form-group">
-        <label>Результат:</label>
-        <input type="text" v-model="additionalData.result" placeholder="Например: 2:1" class="input-field" />
-        <label>Победившая команда:</label>
-        <select v-model="additionalData.winner_team_id" class="select-field">
-          <option value="">Выберите команду</option>
-          <option v-for="team in teamsInMatch" :key="team.id" :value="team.id">
-            {{ team.name }}
-          </option>
-        </select>
-      </div>
-
-      <!-- Поля для следующего этапа -->
-      <div v-if="selectedNotificationType === 'next-stage'" class="form-group">
-        <label>Команда:</label>
-        <select v-model="additionalData.team_id" class="select-field">
-          <option value="">Выберите команду</option>
-          <option v-for="team in teamsInTournament" :key="team.id" :value="team.id">
-            {{ team.name }}
-          </option>
-        </select>
-        <label>Этап:</label>
-        <select v-model="additionalData.stage_id" class="select-field">
-          <option value="">Выберите этап</option>
-          <option v-for="stage in stages" :key="stage.id" :value="stage.id">
-            {{ stage.name }}
-          </option>
-        </select>
-      </div>
-
-      <!-- Поля для выбывания команды -->
-      <div v-if="selectedNotificationType === 'team-elimination'" class="form-group">
-        <label>Команда:</label>
-        <select v-model="additionalData.team_id" class="select-field">
-          <option value="">Выберите команду</option>
-          <option v-for="team in teamsInTournament" :key="team.id" :value="team.id">
-            {{ team.name }}
-          </option>
-        </select>
-      </div>
-    </div>
-
-    <!-- Кнопка отправки -->
-    <BaseButton 
-      @click="sendNotification" 
-      :disabled="!isFormValid"
-      class="send-button"
-    >
-      Отправить уведомление
-    </BaseButton>
 
     <!-- Сообщение об успехе/ошибке -->
-    <div v-if="message" :class="['message', { 'success': !isError, 'error': isError }]">
-      {{ message }}
+    <div v-if="message" :class="['message-card', { 'success': !isError, 'error': isError }]">
+      <i :class="['message-icon', isError ? 'fas fa-exclamation-circle' : 'fas fa-check-circle']"></i>
+      <span>{{ message }}</span>
     </div>
   </div>
 </template>
 
 <script>
-import { ref, computed } from 'vue';
+import { ref, computed, inject } from 'vue';
 import axios from 'axios';
 import BaseButton from '@/components/BaseButton.vue';
 
@@ -111,6 +179,11 @@ export default {
   name: 'NotificationSection',
   components: {
     BaseButton
+  },
+  setup() {
+    // Инжектим сервис уведомлений из плагина
+    const notificationsService = inject('notifications');
+    return { notificationsService };
   },
   data() {
     return {
@@ -163,8 +236,19 @@ export default {
   methods: {
     async fetchTournaments() {
       try {
-        const response = await fetch('http://event-edge-su/api/guest/tournaments');
-        this.tournaments = await response.json();
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (!user || !user.token) {
+          this.error = "Необходима авторизация";
+          return;
+        }
+        
+        const response = await axios.get('http://event-edge-su/api/guest/tournaments', {
+          headers: {
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        this.tournaments = response.data;
       } catch (error) {
         console.error('Ошибка загрузки турниров:', error);
         this.message = 'Ошибка при загрузке турниров';
@@ -262,73 +346,100 @@ export default {
     },
     async sendNotification() {
       try {
-        let endpoint = '';
-        let data = {};
-        const user = JSON.parse(localStorage.getItem('user'));
-        
-        if (!user || !user.token) {
-          throw new Error('Не найден токен авторизации');
+        if (!this.isFormValid) {
+          this.message = 'Заполните все необходимые поля';
+          this.isError = true;
+          return;
         }
+        
+        // Сбрасываем сообщение перед отправкой
+        this.message = '';
+        this.isError = false;
+        
+        let result;
 
         switch (this.selectedNotificationType) {
           case 'tournament-start':
-            endpoint = `/admin/tournament/${this.selectedTournamentId}/notify-start`;
+            // Отправляем уведомление через плагин
+            result = await this.notificationsService.sendNotification(
+              'tournament-start', 
+              this.selectedTournamentId
+            );
             break;
           case 'match-reschedule':
-            endpoint = `/admin/match/${this.additionalData.match_id}/notify-reschedule`;
-            data = { new_time: this.additionalData.new_time };
+            // Отправляем уведомление через плагин
+            result = await this.notificationsService.sendNotification(
+              'match-reschedule', 
+              this.additionalData.match_id, 
+              { new_time: this.additionalData.new_time }
+            );
             break;
           case 'match-result':
-            endpoint = `/admin/match/${this.selectedTournamentId}/notify-result`;
-            data = {
-              winner_team_id: this.additionalData.winner_team_id,
-              result: this.additionalData.result
-            };
+            // Отправляем уведомление через плагин
+            result = await this.notificationsService.sendNotification(
+              'match-result', 
+              this.selectedTournamentId, 
+              {
+                winner_team_id: this.additionalData.winner_team_id,
+                result: this.additionalData.result
+              }
+            );
             break;
           case 'next-stage':
-            endpoint = `/admin/tournament/${this.selectedTournamentId}/notify-next-stage`;
-            data = {
-              team_id: this.additionalData.team_id,
-              stage_id: this.additionalData.stage_id
-            };
+            // Отправляем уведомление через плагин
+            result = await this.notificationsService.sendNotification(
+              'next-stage', 
+              this.selectedTournamentId, 
+              {
+                team_id: this.additionalData.team_id,
+                stage_id: this.additionalData.stage_id
+              }
+            );
             break;
           case 'team-elimination':
-            endpoint = `/admin/tournament/${this.selectedTournamentId}/notify-team-elimination`;
-            data = { team_id: this.additionalData.team_id };
+            // Отправляем уведомление через плагин
+            result = await this.notificationsService.sendNotification(
+              'team-elimination', 
+              this.selectedTournamentId, 
+              { team_id: this.additionalData.team_id }
+            );
             break;
           case 'team-registration':
-            endpoint = '/admin/tournament/notify-registration';
-            data = {
-              tournament_id: this.selectedTournamentId,
-              team_id: this.additionalData.team_id
-            };
+            // Отправляем уведомление через плагин
+            result = await this.notificationsService.sendNotification(
+              'team-registration', 
+              null, 
+              {
+                tournament_id: this.selectedTournamentId,
+                team_id: this.additionalData.team_id
+              }
+            );
             break;
           case 'team-registration-accept':
-            endpoint = `/admin/tournament/${this.selectedTournamentId}/notify-team-registration-accept`;
-            data = { team_id: this.additionalData.team_id };
+            // Отправляем уведомление через плагин
+            result = await this.notificationsService.sendNotification(
+              'team-registration-accept', 
+              this.selectedTournamentId, 
+              { team_id: this.additionalData.team_id }
+            );
             break;
         }
 
-        const response = await fetch(`http://event-edge-su/api${endpoint}`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${user.token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(data)
-        });
-
-        if (!response.ok) {
-          throw new Error('Ошибка при отправке уведомления');
+        if (result && result.success) {
+          this.message = 'Уведомление успешно отправлено';
+          this.isError = false;
+          
+          // Вызываем событие обновления уведомлений для всех компонентов
+          this.notificationsService.refreshNotifications();
+          
+          // Очищаем форму после успешной отправки
+          this.selectedNotificationType = '';
+          this.selectedTournamentId = '';
+          this.additionalData = {};
+        } else {
+          this.message = result?.error || 'Ошибка при отправке уведомления';
+          this.isError = true;
         }
-
-        this.message = 'Уведомление успешно отправлено';
-        this.isError = false;
-        
-        // Очищаем форму после успешной отправки
-        this.selectedNotificationType = '';
-        this.selectedTournamentId = '';
-        this.additionalData = {};
       } catch (error) {
         console.error('Ошибка при отправке уведомления:', error);
         this.message = error.message || 'Ошибка при отправке уведомления';
@@ -353,48 +464,227 @@ export default {
 
 <style scoped>
 .notification-section {
-  padding: 20px;
+  padding: 30px;
   max-width: 800px;
   margin: 0 auto;
 }
 
-.form-group {
-  margin-bottom: 20px;
+.section-title {
+  font-size: 2.2rem;
+  color: #fff;
+  margin-bottom: 30px;
+  text-align: center;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
 }
 
-.select-field, .input-field {
+.section-title i {
+  color: #630181;
+}
+
+.notification-card {
+  background: linear-gradient(145deg, #2c2c2c, #1a1a1a);
+  border-radius: 15px;
+  padding: 30px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  margin-bottom: 30px;
+  border: 1px solid rgba(182, 0, 254, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.notification-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  padding: 10px;
-  margin-top: 5px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: #fff;
+  height: 4px;
+  background: linear-gradient(90deg, #630181, #9500ff);
+}
+
+.form-group {
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.form-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #ffffff;
+  font-size: 1.1rem;
+}
+
+.form-group label i {
+  color: #630181;
+  width: 20px;
+  text-align: center;
+}
+
+.select-field {
+  width: 100%;
+  padding: 12px 15px;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: #3c3c3c;
+  color: white;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-repeat: no-repeat;
+  background-position: right 15px center;
+}
+
+.select-field:hover {
+  background: #444444;
+}
+
+.select-field:focus {
+  outline: none;
+  border-color: #630181;
+  box-shadow: 0 0 0 2px rgba(99, 1, 129, 0.3);
+}
+
+.select-field option {
+  background: #2c2c2c;
+  color: white;
+  padding: 8px;
+}
+
+.select-field option:hover {
+  background: #3c3c3c;
+}
+
+.select-field option:checked {
+  background: #630181;
+}
+
+.input-field {
+  width: 100%;
+  padding: 12px 15px;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: #630181;
+  box-shadow: 0 0 0 2px rgba(99, 1, 129, 0.3);
 }
 
 .send-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   width: 100%;
-  margin-top: 20px;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  background: linear-gradient(45deg, #630181, #9500ff);
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 30px;
+  box-shadow: 0 4px 15px rgba(99, 1, 129, 0.3);
 }
 
-.message {
+.send-button:hover:not(.disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(99, 1, 129, 0.4);
+}
+
+.send-button:active:not(.disabled) {
+  transform: translateY(1px);
+}
+
+.send-button.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: linear-gradient(45deg, #444, #666);
+}
+
+.message-card {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 20px;
+  border-radius: 10px;
   margin-top: 20px;
-  padding: 10px;
-  border-radius: 4px;
+  font-size: 1.1rem;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .success {
-  background-color: #4CAF50;
+  background: linear-gradient(145deg, #1c4d1e, #2c7431);
   color: white;
+  border: 1px solid rgba(76, 175, 80, 0.3);
 }
 
 .error {
-  background-color: #f44336;
+  background: linear-gradient(145deg, #6b1a1a, #8e2121);
   color: white;
+  border: 1px solid rgba(244, 67, 54, 0.3);
 }
 
-label {
-  display: block;
-  margin-bottom: 5px;
-  color: #ffffff;
+.message-icon {
+  font-size: 1.5rem;
+}
+
+.additional-fields {
+  border-left: 2px solid #630181;
+  padding-left: 20px;
+  margin-left: 10px;
+  margin-top: 30px;
+}
+
+@media (max-width: 768px) {
+  .notification-section {
+    padding: 20px;
+  }
+  
+  .section-title {
+    font-size: 1.8rem;
+  }
+  
+  .notification-card {
+    padding: 20px;
+  }
+  
+  .send-button {
+    padding: 12px;
+    font-size: 1rem;
+  }
+  
+  .message-card {
+    flex-direction: column;
+    text-align: center;
+  }
 }
 </style>

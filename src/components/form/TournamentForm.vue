@@ -1,6 +1,6 @@
 <template>
     <div class="tournament-form">
-      <h3>Создать новый турнир</h3>
+      <h3>{{ isEdit ? 'Редактировать турнир' : 'Создать новый турнир' }}</h3>
       
       <form @submit="handleSubmit">
         <div class="form-group">
@@ -113,7 +113,7 @@
               />
               <label for="tournament-image" class="upload-label">
                 <i class="upload-icon">+</i>
-                <span>Выберите изображение</span>
+                <span>{{ imagePreview ? 'Изменить изображение' : 'Выберите изображение' }}</span>
               </label>
             </div>
 
@@ -123,8 +123,8 @@
                 <button type="button" @click="removeImage" class="remove-image">×</button>
               </div>
               <div class="image-info">
-                <span class="file-name">{{ formData.image?.name }}</span>
-                <span class="file-size">{{ formatFileSize(formData.image?.size) }}</span>
+                <span class="file-name">{{ formData.image?.name || 'Текущее изображение' }}</span>
+                <span class="file-size" v-if="formData.image">{{ formatFileSize(formData.image?.size) }}</span>
               </div>
             </div>
           </div>
@@ -135,7 +135,7 @@
             Отмена
           </BaseButton>
           <BaseButton type="submit" :disabled="isSubmitting" customClass="btn-primary">
-            {{ isSubmitting ? 'Отправка...' : 'Создать' }}
+            {{ isSubmitting ? 'Отправка...' : (isEdit ? 'Сохранить' : 'Создать') }}
           </BaseButton>
         </div>
       </form>
@@ -143,7 +143,7 @@
   </template>
   
   <script>
-  import { ref } from 'vue'
+  import { ref, computed, onMounted, watch } from 'vue'
   import BaseButton from '@/components/BaseButton.vue'
   
   export default {
@@ -161,6 +161,14 @@
       teams: {
         type: Array,
         default: () => []
+      },
+      tournament: {
+        type: Object,
+        default: null
+      },
+      isEdit: {
+        type: Boolean,
+        default: false
       }
     },
     setup(props, { emit }) {
@@ -177,6 +185,37 @@
         teams: [],
         image: null
       })
+      
+      // Initialize form data if in edit mode
+      const initFormData = () => {
+        if (props.isEdit && props.tournament) {
+          // Format datetime for HTML datetime-local input
+          const formatDateTime = (dateTimeStr) => {
+            if (!dateTimeStr) return ''
+            const date = new Date(dateTimeStr)
+            return date.toISOString().slice(0, 16) // Format: YYYY-MM-DDTHH:MM
+          }
+          
+          formData.value = {
+            name: props.tournament.name || '',
+            description: props.tournament.description || '',
+            start_date: formatDateTime(props.tournament.start_date),
+            end_date: formatDateTime(props.tournament.end_date),
+            game_id: props.tournament.game_id,
+            stage_id: props.tournament.stage_id,
+            status: props.tournament.status || 'pending',
+            teams: Array.isArray(props.tournament.teams) 
+              ? props.tournament.teams.map(team => typeof team === 'object' ? team.id : team) 
+              : [],
+            image: null // Keep original image unless changed
+          }
+          
+          // Set image preview if tournament has image
+          if (props.tournament.image) {
+            imagePreview.value = props.tournament.image
+          }
+        }
+      }
   
       const handleImageUpload = (event) => {
         const file = event.target.files[0]
@@ -214,6 +253,11 @@
             image: formData.value.image
           }
           
+          // Если это редактирование, добавляем id турнира
+          if (props.isEdit && props.tournament) {
+            submissionData.id = props.tournament.id
+          }
+          
           // Форматируем даты
           if (formData.value.start_date) {
             submissionData.start_date = formData.value.start_date.replace('T', ' ').slice(0, 16) + ':00'
@@ -241,6 +285,16 @@
         }
         return `${size.toFixed(1)} ${units[unitIndex]}`
       }
+      
+      // Initialize form data when component is mounted or tournament prop changes
+      onMounted(() => {
+        initFormData()
+      })
+      
+      // Watch for changes to the tournament prop and update form data accordingly
+      watch(() => props.tournament, () => {
+        initFormData()
+      }, { deep: true })
   
       return {
         formData,
@@ -249,7 +303,8 @@
         handleImageUpload,
         removeImage,
         handleSubmit,
-        formatFileSize
+        formatFileSize,
+        isEdit: props.isEdit
       }
     }
   }

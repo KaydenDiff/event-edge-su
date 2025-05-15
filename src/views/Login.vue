@@ -358,103 +358,116 @@ const clearForm = () => {
 
 <style scoped>
 .login-page {
-  padding: 50px 30px; /* Увеличиваем отступы вокруг формы */
+  padding: 50px 30px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  animation: fadeIn 0.8s ease-out; /* Применяем анимацию при загрузке */
-}
-
-h1 {
-  color: #ffffff; /* Темно-золотой */
-  font-size: 3rem; /* Увеличиваем размер заголовка */
+  animation: fadeIn 0.8s ease-out;
 }
 
 .mode-toggle {
   display: flex;
   gap: 2px;
-  margin-bottom: 20px;
-  background: #333;
-  padding: 2px;
-  border-radius: 8px;
+  margin-bottom: 30px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px;
+  border-radius: 12px;
   width: 100%;
   max-width: 500px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .toggle-btn {
   flex: 1;
-  padding: 10px;
+  padding: 12px 20px;
   border: none;
   background: transparent;
   color: #fff;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 8px;
   transition: all 0.3s ease;
+  font-weight: 500;
+  font-size: 1rem;
 }
 
 .toggle-btn.active {
-  background: #630181;
+  background: linear-gradient(45deg, #630181);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .auth-form {
-  background: #4d4d4d;
-  padding: 25px; /* Уменьшаем отступы формы */
-  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 35px;
+  border-radius: 20px;
   width: 100%;
-  max-width: 450px; /* Уменьшаем максимальную ширину формы */
+  max-width: 450px;
   color: #ffffff;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
 }
 
 .form-group {
-  margin-bottom: 15px;
+  margin-bottom: 20px;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 4px;
-  font-size: 0.9rem;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
   color: #fff;
+  font-weight: 500;
 }
 
 .form-group input {
   width: 100%;
-  padding: 8px;
-  border: 1px solid #666;
-  border-radius: 4px;
-  background: #333;
+  padding: 12px 16px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
   color: #fff;
-  font-size: 0.9rem;
+  font-size: 1rem;
   transition: all 0.3s ease;
 }
 
 .form-group input:focus {
   outline: none;
   border-color: #630181;
-  box-shadow: 0 0 0 2px rgba(99, 1, 129, 0.2);
+  box-shadow: 0 0 0 3px rgba(99, 1, 129, 0.2);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .form-group input.error {
-  border-color: #ff4444;
+  border-color: #ca44ff;
+  background: rgba(255, 68, 68, 0.1);
 }
 
 .error-text {
   color: #ff4444;
-  font-size: 0.8rem;
-  margin-top: 4px;
+  font-size: 0.85rem;
+  margin-top: 6px;
+  padding-left: 4px;
 }
 
 .auth-button {
-  margin-top: 10px;
-  padding: 10px;
-  font-size: 0.95rem;
+  margin-top: 15px;
+  padding: 12px 24px;
+  font-size: 1rem;
   width: 100%;
+
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .auth-button:hover {
   transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
 }
 
 .auth-button:active {
@@ -463,50 +476,89 @@ h1 {
 
 .recovery-link {
   text-align: center;
-  margin-top: 15px;
+  margin-top: 20px;
 }
 
 .recovery-link a {
-  color: #4a76a8;
+  color: #630181;
   text-decoration: none;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
 }
 
 .recovery-link a:hover {
+  color: #e282ff;
   text-decoration: underline;
 }
 
 .error-message {
-  font-size: 0.85rem;
-  margin-bottom: 10px;
+  font-size: 0.9rem;
+  margin-bottom: 15px;
+  padding: 12px;
+  background: rgba(255, 68, 68, 0.1);
+  border: 1px solid rgba(255, 68, 68, 0.2);
+  border-radius: 8px;
+  color: #ff4444;
 }
 
 .remember-me {
-  margin-bottom: 15px;
+  margin-bottom: 20px;
   font-size: 0.9rem;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .remember-me input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   cursor: pointer;
+  accent-color: #630181;
 }
 
 .remember-me label {
   cursor: pointer;
+  color: #fff;
 }
 
 .profile-link {
-  margin-top: 20px;
+  margin-top: 25px;
+  text-align: center;
 }
 
 .profile-link span {
   cursor: pointer;
+  color: #ff6a1f;
+  transition: all 0.3s ease;
 }
 
 .profile-link span:hover {
+  color: #ff8533;
   text-decoration: underline;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .login-page {
+    padding: 30px 20px;
+  }
+  
+  .auth-form {
+    padding: 25px;
+  }
+  
+  .mode-toggle {
+    margin-bottom: 20px;
+  }
 }
 </style>

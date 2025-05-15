@@ -1,38 +1,25 @@
 <template>
     <div class="match-section">
-      <BaseButton customClass="details-btn" @click="showCreateMatchForm = !showCreateMatchForm">
+      <BaseButton customClass="details-btn" @click="toggleMatchForm">
         {{ showCreateMatchForm ? 'Скрыть форму' : 'Создать матч' }}
       </BaseButton>
   
-      <div v-if="showCreateMatchForm" class="create-match-form">
-        <label>Турнир:</label>
-        <select v-model="newMatch.tournament_id">
-          <option disabled value="">Выберите турнир</option>
-          <option v-for="t in tournaments" :key="t.id" :value="t.id">{{ t.name }}</option>
-        </select>
-  
-        <label>Команда 1:</label>
-        <select v-model="newMatch.team_1_id">
-          <option disabled value="">Выберите команду</option>
-          <option v-for="team in filteredTeams" :key="team.id" :value="team.id">{{ team.name }}</option>
-        </select>
-  
-        <label>Команда 2:</label>
-        <select v-model="newMatch.team_2_id">
-          <option disabled value="">Выберите команду</option>
-          <option v-for="team in filteredTeams" :key="team.id" :value="team.id">{{ team.name }}</option>
-        </select>
-  
-        <label>Дата матча:</label>
-        <input type="datetime-local" v-model="newMatch.match_date" />
-  
-        <label>Стадия:</label>
-        <select v-model="newMatch.stage_id">
-          <option disabled value="">Выберите стадию</option>
-          <option v-for="stage in stages" :key="stage.id" :value="stage.id">{{ stage.name }}</option>
-        </select>
-  
-        <BaseButton @click="createMatch">Создать матч</BaseButton>
+      <div v-if="showCreateMatchForm" class="form-container">
+        <MatchForm 
+          :isCreate="true" 
+          @submit-success="handleMatchCreated" 
+          @cancel="showCreateMatchForm = false"
+        />
+      </div>
+
+      <div v-if="showEditMatchForm" class="form-container">
+        <h3>Редактирование матча</h3>
+        <MatchForm 
+          :isCreate="false" 
+          :matchId="editingMatchId" 
+          @submit-success="handleMatchUpdated" 
+          @cancel="cancelEditing"
+        />
       </div>
   
       <div class="matches-list">
@@ -44,23 +31,10 @@
               :tournamentName="getTournamentName(match.tournament_id)"
               :bracketMatches="getBracketMatchesForTournament(match.tournament_id)"
               @match-added="handleMatchAdded"
+              @match-deleted="handleMatchDeleted"
+              @edit-match="editMatch"
             />
-            <div class="match-actions">
-              <BaseButton customClass="details-btn" @click="editMatch(match.id)">Редактировать</BaseButton>
-              <BaseButton customClass="details-btn" @click="showDeleteConfirmation(match)">Удалить</BaseButton>
-            </div>
           </div>
-          </div>
-        </div>
-    </div>
-  
-    <!-- Диалоговое окно подтверждения удаления -->
-    <div v-if="showDeleteDialog" class="confirmation-dialog">
-      <div class="dialog-content">
-        <p>Вы точно хотите удалить матч между "{{ getTeamName(matchToDelete?.team_1_id) }}" и "{{ getTeamName(matchToDelete?.team_2_id) }}"?</p>
-        <div class="dialog-actions">
-          <BaseButton customClass="details-btn" @click="confirmDelete">Да</BaseButton>
-          <BaseButton customClass="details-btn" @click="cancelDelete">Нет</BaseButton>
         </div>
       </div>
     </div>
@@ -69,12 +43,14 @@
   <script>
   import BaseButton from '@/components/BaseButton.vue';
   import MatchCard from '@/components/MatchCard.vue';
+  import MatchForm from '@/components/form/MatchForm.vue';
   
   export default {
     name: 'MatchSection',
     components: {
       BaseButton,
-      MatchCard
+      MatchCard,
+      MatchForm
     },
     data() {
       return {
@@ -84,50 +60,11 @@
         stages: [],
         bracketMatchesByTournament: {},
         showCreateMatchForm: false,
-        showDeleteDialog: false,
-        matchToDelete: null,
-        newMatch: {
-          tournament_id: '',
-          team_1_id: '',
-          team_2_id: '',
-          match_date: '',
-          status: 'pending',
-          winner_team_id: '',
-          stage_id: ''
-        }
+        showEditMatchForm: false,
+        editingMatchId: null
       };
     },
-    computed: {
-      filteredTeams() {
-        return this.teams.filter(team => team.status === 'active');
-      }
-    },
-    watch: {
-      'newMatch.tournament_id': 'handleTournamentChange'
-    },
     methods: {
-      async handleTournamentChange(newVal) {
-        if (newVal) {
-          await this.fetchTeamsForTournament(newVal);
-          this.newMatch.team_1_id = '';
-          this.newMatch.team_2_id = '';
-        } else {
-          this.teams = [];
-        }
-      },
-      async fetchTeamsForTournament(tournamentId) {
-        try {
-          if (!tournamentId) return;
-          
-          const res = await fetch(`http://event-edge-su/api/guest/tournaments/${tournamentId}/teams`);
-          if (!res.ok) throw new Error('Ошибка загрузки команд');
-          
-          const data = await res.json();
-          this.teams = [...this.teams, ...(data.teams || [])];
-        } catch (e) {
-          console.error('Ошибка загрузки команд:', e);
-        }
-      },
       async fetchAllData() {
         try {
           await Promise.all([
@@ -197,39 +134,33 @@
         // Refresh bracket data for all tournaments after a match is added
         this.fetchBracketDataForAllTournaments();
       },
-      async createMatch() {
-        const user = JSON.parse(localStorage.getItem('user'));
-        if (!user || !user.token) {
-          console.error('Токен не найден');
-          return;
+      handleMatchDeleted(matchId) {
+        // Remove the deleted match from the matches array
+        this.matches = this.matches.filter(match => match.id !== matchId);
+      },
+      handleMatchCreated() {
+        this.showCreateMatchForm = false;
+        this.fetchMatches();
+      },
+      handleMatchUpdated() {
+        this.showEditMatchForm = false;
+        this.editingMatchId = null;
+        this.fetchMatches();
+      },
+      toggleMatchForm() {
+        this.showCreateMatchForm = !this.showCreateMatchForm;
+        if (this.showCreateMatchForm) {
+          this.showEditMatchForm = false;
         }
-  
-        try {
-          const res = await fetch('http://event-edge-su/api/admin/game-matches/create', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${user.token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(this.newMatch)
-          });
-  
-          if (!res.ok) throw new Error('Ошибка при создании матча');
-  
-          this.newMatch = {
-            tournament_id: '',
-            team_1_id: '',
-            team_2_id: '',
-            match_date: '',
-            status: 'pending',
-            winner_team_id: '',
-            stage_id: ''
-          };
-          this.showCreateMatchForm = false;
-          await this.fetchMatches();
-        } catch (e) {
-          console.error('Ошибка создания матча:', e);
-        }
+      },
+      editMatch(matchId) {
+        this.editingMatchId = matchId;
+        this.showEditMatchForm = true;
+        this.showCreateMatchForm = false;
+      },
+      cancelEditing() {
+        this.showEditMatchForm = false;
+        this.editingMatchId = null;
       },
       getTournamentName(tournamentId) {
         const tournament = this.tournaments.find(t => t.id === tournamentId);
@@ -241,44 +172,6 @@
       getTeamName(teamId) {
         const team = this.teams.find(t => t.id === teamId);
         return team ? team.name : 'Неизвестная команда';
-      },
-      showDeleteConfirmation(match) {
-        this.matchToDelete = match;
-        this.fetchTeamsForTournament(match.tournament_id).then(() => {
-          this.showDeleteDialog = true;
-        });
-      },
-      async confirmDelete() {
-        if (!this.matchToDelete) return;
-  
-        const user = JSON.parse(localStorage.getItem('user'));
-        if (!user || !user.token) return;
-  
-        try {
-          const res = await fetch(`http://event-edge-su/api/admin/game-matches/delete/${this.matchToDelete.id}`, {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${user.token}`,
-              'Content-Type': 'application/json'
-            }
-          });
-  
-          if (!res.ok) throw new Error('Ошибка удаления матча');
-  
-          this.matches = this.matches.filter(match => match.id !== this.matchToDelete.id);
-        } catch (e) {
-          console.error('Ошибка удаления матча:', e);
-        } finally {
-          this.showDeleteDialog = false;
-          this.matchToDelete = null;
-        }
-      },
-      cancelDelete() {
-        this.showDeleteDialog = false;
-        this.matchToDelete = null;
-      },
-      editMatch(id) {
-        this.$router.push({ name: 'EditMatch', params: { id } });
       }
     },
     mounted() {
@@ -289,217 +182,141 @@
   
   <style scoped>
 .match-section {
-  padding: 20px;
-  max-width: 1200px;
+  padding: 2rem;
+  max-width: 1400px;
   margin: 0 auto;
+  min-height: 100vh;
 }
 
 .details-btn {
   padding: 12px 25px;
   border-radius: 8px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  transition: all 0.3s ease-in-out;
-  margin-bottom: 30px;
-  cursor: pointer;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  margin-bottom: 2rem;
+  cursor: pointer; 
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2);
 }
 
 .details-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.3);
+  background: linear-gradient(135deg, #9461FF, #7C3AED);
 }
 
-.create-match-form {
-  background: linear-gradient(145deg, #2c2c2c, #1a1a1a);
-  border-radius: 15px;
-  padding: 25px;
+.form-container {
   margin-bottom: 30px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(182, 0, 254, 0.1);
 }
 
-.create-match-form label {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #ffffff;
-  margin: 10px 0;
-  display: block;
+.form-container h3 {
+  margin-bottom: 20px;
+  font-size: 1.5rem;
+  color: #fff;
+  text-align: center;
 }
 
-.create-match-form select,
-.create-match-form input {
-  width: 100%;
-  padding: 12px;
-  font-size: 1rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(182, 0, 254, 0.1);
-  border-radius: 8px;
-  color: #ffffff;
-  margin-bottom: 15px;
-}
- .create-match-form input:focus,
-  .create-match-form select:focus {
-    outline: none;
-  }
-    .create-match-form input::placeholder {
-    color: rgba(255, 255, 255, 0.5);
-  }
-
-.create-match-form select option {
-  color: #ffffff;
-  background-color: #272727 ;
-  border: 1px solid rgba(182, 0, 254, 0.1);
-}
-
-.create-match-form select option:hover,
-.create-match-form select option:checked {
-  color: #ffffff ;
-  border: 1px solid rgba(182, 0, 254, 0.1);
-}
-
-.create-match-form select:focus,
-.create-match-form input[type="datetime-local"]:focus {
-  outline: none;
-  border-color: #630181;
-  box-shadow: 0 0 10px rgba(182, 0, 254, 0.2);
-  background: rgba(255, 255, 255, 0.05);
-}
-
-  
-  .create-match-form select:hover {
-    background: #3c3c3c;
-  }
-  
-  .create-match-form select option {
-    background: #2c2c2c;
-    color: white;
-    padding: 8px;
-  }
-  
-  .create-match-form select option:hover {
-    background: #3c3c3c;
-  }
-  
 .matches-list {
-  display: flex;
-  flex-wrap: wrap;
-  margin: -10px;
-  justify-content: flex-start;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 50px;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .matches-list > div:first-child {
   width: 100%;
-  margin: 10px;
   text-align: center;
+  grid-column: 1 / -1;
+  color: #E5E7EB;
+  font-size: 1.1rem;
+  padding: 2rem;
 }
 
 .match-card {
-  background: linear-gradient(145deg, #2c2c2c, #1a1a1a);
-  padding: 25px;
-  border-radius: 15px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(182, 0, 254, 0.1);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.match-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
-  height: 4px;
-  background: linear-gradient(90deg, #630181, #6301817e);
-}
-
-.match-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+  margin: 0;
+  box-sizing: border-box;
+  transition: transform 0.3s ease;
 }
 
 .tournament-name {
-  font-size: 1.4rem;
-  color: #ffffff;
+  font-size: 1.25rem;
+  color: #FFFFFF;
   font-weight: 600;
-  margin-bottom: 15px;
+  margin-bottom: 1rem;
 }
 
-.stage-name, .match-date {
-  font-size: 1rem;
-  color: #EAEAEA;
-  margin: 5px 0;
+.stage-name, 
+.match-date {
+  font-size: 0.9rem;
+  color: #A3A3A3;
+  margin: 0.25rem 0;
 }
 
 .teams {
-  margin: 15px 0;
-  padding: 10px;
-  background: rgba(255, 255, 255, 0.05);
+  margin: 1rem 0;
+  padding: 1rem;
+  background: rgba(139, 92, 246, 0.05);
   border-radius: 8px;
+  border: 1px solid rgba(139, 92, 246, 0.1);
 }
 
 .teams p {
-  font-size: 1.1rem;
-  margin: 8px 0;
-  color: #EAEAEA;
-  padding: 8px;
+  font-size: 1rem;
+  margin: 0.5rem 0;
+  color: #E5E7EB;
+  padding: 0.75rem;
   border-radius: 6px;
   transition: background-color 0.3s ease;
 }
 
 .teams p:hover {
-  background: rgba(182, 0, 254, 0.1);
+  background: rgba(139, 92, 246, 0.1);
 }
 
 .winner {
-  font-weight: bold;
-  color: #4CAF50;
-  background: rgba(76, 175, 80, 0.1);
+  font-weight: 600;
+  color: #8B5CF6 !important;
+  background: rgba(139, 92, 246, 0.1);
 }
 
 .result {
-  margin: 15px 0;
-  font-size: 1.1rem;
-  color: #EAEAEA;
+  margin: 1rem 0;
+  font-size: 1rem;
+  color: #E5E7EB;
 }
 
 .winner-info {
-  margin: 15px 0;
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: #4CAF50;
-  padding: 10px;
-  background: rgba(76, 175, 80, 0.1);
+  margin: 1rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #8B5CF6;
+  padding: 1rem;
+  background: rgba(139, 92, 246, 0.1);
   border-radius: 8px;
+  border: 1px solid rgba(139, 92, 246, 0.2);
 }
 
 .status {
-  margin: 15px 0;
-  font-size: 1.1rem;
-  font-weight: bold;
-  color: #EAEAEA;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+  color: #A3A3A3;
 }
 
 .match-actions {
   display: flex;
-  gap: 15px;
-  margin-top: 20px;
+  gap: 1rem;
+  margin-top: 1.5rem;
 }
 
 .match-actions button {
   flex: 1;
-  padding: 10px 20px;
+  padding: 0.75rem 1.5rem;
   border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 0.9rem;
+  font-weight: 500;
   cursor: pointer;
-}
-
-.match-actions button:hover {
-  transform: translateY(-2px);
+  transition: all 0.3s ease;
 }
 
 .confirmation-dialog {
@@ -513,63 +330,81 @@
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  backdrop-filter: blur(5px);
+  backdrop-filter: blur(8px);
 }
 
 .dialog-content {
-  background: linear-gradient(145deg, #2c2c2c, #1a1a1a);
-  padding: 30px;
-  border-radius: 15px;
+  background: #2A2A2A;
+  padding: 2rem;
+  border-radius: 16px;
   max-width: 400px;
   width: 90%;
   box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(182, 0, 254, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.2);
 }
 
 .dialog-content p {
-  font-size: 1.2rem;
-  color: #ffffff;
-  margin-bottom: 25px;
+  font-size: 1.1rem;
+  color: #E5E7EB;
+  margin-bottom: 1.5rem;
   text-align: center;
+  line-height: 1.5;
 }
 
 .dialog-actions {
   display: flex;
   justify-content: center;
-  gap: 15px;
+  gap: 1rem;
 }
 
 .dialog-actions button {
-  padding: 12px 30px;
+  padding: 0.75rem 2rem;
   border-radius: 8px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
+  transition: all 0.3s ease;
 }
 
 .dialog-actions button:first-child {
-  background: linear-gradient(45deg, #630181, #ff6a1f);
+  background: #8B5CF6;
   color: white;
+  border: none;
 }
 
 .dialog-actions button:last-child {
-  background: rgba(255, 255, 255, 0.1);
+  background: #333333;
   color: white;
+  border: 1px solid rgba(139, 92, 246, 0.2);
 }
 
 .dialog-actions button:hover {
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(139, 92, 246, 0.2);
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 992px) {
   .matches-list {
-    justify-content: center;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
   }
 }
 
-@keyframes pulseBorder {
-  0% { border-color: rgba(182, 0, 254, 0.1); }
-  50% { border-color: rgba(182, 0, 254, 0.3); }
-  100% { border-color: rgba(182, 0, 254, 0.1); }
+@media (max-width: 768px) {
+  .match-section {
+    padding: 1rem;
+  }
+
+  .matches-list {
+    grid-template-columns: 1fr;
+  }
+  
+  .match-card {
+    width: 100%;
+  }
+
+  .form-container {
+    padding: 0;
+  }
 }
   </style>
   

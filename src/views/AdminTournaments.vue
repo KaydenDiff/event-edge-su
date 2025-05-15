@@ -1,6 +1,5 @@
 <template>
     <div class="admin-panel">
-      <AdminSidebar /> <!-- Sidebar будет всегда виден -->
       <div class="main-content">
         <h2>Управление турнирами</h2>
         <div v-if="!tournaments || tournaments.length === 0">Нет турниров</div>
@@ -23,14 +22,12 @@
   </template>
   
   <script>
-  import AdminSidebar from '../components/AdminSidebar.vue';
   import TournamentCard from '../components/TournamentCard.vue';
   import { ref, onMounted, computed } from 'vue';
   
   export default {
     name: 'AdminTournaments',
     components: {
-      AdminSidebar,
       TournamentCard
     },
     setup() {

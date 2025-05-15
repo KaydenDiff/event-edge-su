@@ -314,7 +314,6 @@ label {
   font-weight: 600;
   color: #ffffff;
 }
-
 select,
 input[type="datetime-local"],
 input[type="text"] {
@@ -333,6 +332,10 @@ input[type="text"]:focus {
   outline: none;
   border-color: #630181;
   box-shadow: 0 0 10px rgba(182, 0, 254, 0.2);
+}
+
+select:focus option {
+  color: #000000;
 }
 
 .form-actions {

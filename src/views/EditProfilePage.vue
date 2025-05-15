@@ -57,7 +57,6 @@
 
 <script>
 import axios from "axios";
-import { useAuthStore } from "@/stores/auth.js";
 import { useRouter } from "vue-router";
 import BaseButton from "@/components/BaseButton.vue";
 import { VTooltip } from 'v-tooltip';
@@ -92,11 +91,10 @@ export default {
       this.error = null;
 
       try {
-        const authStore = useAuthStore();
-        const token = authStore.user?.token;
-
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (!user || !user.token) return;
         const response = await axios.get("http://event-edge-su/api/my-profile", {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: {'Authorization': `Bearer ${user.token}`}
         });
 
         this.user = response.data.user;
@@ -251,7 +249,7 @@ input {
   width: 100%;
   padding: 12px;
   border-radius: 8px;
-  border: 1px solid rgba(205, 170, 81, 0.2);
+  border: 1px solid rgba(184, 81, 205, 0.2);
   background-color: rgba(51, 51, 51, 0.8);
   color: #fff;
   font-size: 1rem;
@@ -285,8 +283,6 @@ input:focus {
 }
 
 .details-button {
-  background: linear-gradient(45deg, #630181, #b38d3d);
-  color: #000;
   padding: 12px 25px;
   border-radius: 8px;
   font-weight: 600;
@@ -300,7 +296,7 @@ input:focus {
 }
 
 .details-button:hover {
-  background: linear-gradient(45deg, #b38d3d, #630181);
+  
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(205, 170, 81, 0.3);
 }

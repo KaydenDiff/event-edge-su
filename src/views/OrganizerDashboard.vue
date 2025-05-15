@@ -52,12 +52,12 @@
         
         <div class="form-group">
           <label>Стадия</label>
-          <select v-model="formData.stage_id">
+          <select v-model="formData.stage_type_id">
             <option disabled value="">Выберите стадию</option>
             <option 
               v-for="stage in stages" 
-              :key="stage.id" 
-              :value="stage.id"
+          :key="stage.id" 
+      :value="stage.id"
             >
               {{ stage.name }}
             </option>
@@ -108,6 +108,10 @@
       <div v-if="error" class="error-message">
         {{ error }}
       </div>
+      
+      <div v-if="successMessage" class="success-message">
+        <i class="fas fa-check-circle"></i> {{ successMessage }}
+      </div>
 
       <div class="form-actions">
         <BaseButton type="button" @click="$router.push('/tournaments')" customClass="btn-secondary">
@@ -139,7 +143,7 @@ export default {
         start_date: '',
         end_date: '',
         game_id: '',
-        stage_id: '',
+        stage_type_id: '', // исправлено с stage_id на stage_type_id
         status: 'pending',
         image: null
       },
@@ -149,6 +153,7 @@ export default {
       teams: [],
       isLoading: false,
       error: null,
+      successMessage: null,
     };
   },
   async mounted() {
@@ -312,7 +317,20 @@ export default {
           }
         );
 
-        this.$router.push("/tournaments");
+        this.successMessage = "Уведомление о вашем турнире было отправлено модераторам";
+        
+        this.formData = {
+          name: '',
+          description: '',
+          start_date: '',
+          end_date: '',
+          game_id: '',
+          stage_type_id: '', // исправлено с stage_id на stage_type_id
+          status: 'pending',
+          image: null
+        };
+        this.imagePreview = null;
+        
       } catch (err) {
         if (err.response?.data?.errors) {
           const errors = err.response.data.errors;
@@ -345,6 +363,16 @@ export default {
   max-width: 800px;
   width: 90%;
   margin: 100px auto;
+}
+.success-message {
+  font-size: 18px;
+  color: #4CAF50;
+  background: rgba(76, 175, 80, 0.1);
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  text-align: center;
+  font-weight: bold;
 }
 
 .tournament-form::before {

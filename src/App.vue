@@ -8,7 +8,7 @@ const route = useRoute();
 
 // Определяем, на каких страницах показывать секцию с играми
 const showGamesSection = computed(() => {
-  const routesWithGames = ['/tournaments', '/teams'];
+  const routesWithGames = ['/tournaments'];
   return routesWithGames.includes(route.path);
 });
 
@@ -64,6 +64,7 @@ const handleMenuSelected = (section) => {
 <style scoped>
   .container {
     margin: 0 auto;
+   
     max-width: 1440px;
     padding: 10px 10px;
   }

@@ -3,45 +3,65 @@
     <h1 class="title">Профиль игрока</h1>
 
     <!-- Индикатор загрузки и ошибки -->
-    <div v-if="isLoading" class="loading">Загрузка...</div>
-    <div v-if="error" class="error-message">{{ error }}</div>
+    <div v-if="isLoading" class="loading">
+      <i class="fas fa-spinner fa-pulse"></i> Загрузка...
+    </div>
+    <div v-if="error" class="error-message">
+      <i class="fas fa-exclamation-circle"></i> {{ error }}
+    </div>
 
     <!-- Основной контент -->
     <div v-if="!isLoading && !error && player">
-  <div class="profile-info">
-    <div class="avatar">
-  <img :src="avatarUrl" alt="Аватар" />
-</div>
-    <div class="details">
-      <h2>{{ player.name || "Неизвестный игрок" }}</h2>
-      <p><strong>Команда:</strong> {{ player.team ? player.team.name : "Нет команды" }}</p>
+      <div class="profile-card">
+        <div class="profile-header">
+          <div class="avatar-container">
+            <img :src="avatarUrl" alt="Аватар" class="avatar-image" />
+          </div>
+          <div class="details">
+            <h2>{{ player.name || "Неизвестный игрок" }}</h2>
+            <p><i class="fas fa-users"></i> {{ player.team ? player.team.name : "Нет команды" }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-container">
+        <h3 class="section-title">
+          <i class="fas fa-trophy"></i> История участия в турнирах
+        </h3>
+        <div class="section-content">
+          <ul class="tournament-history" v-if="tournaments.length > 0">
+            <li v-for="tournament in tournaments" :key="tournament.id" 
+                class="tournament-item"
+                @click="goToTournament(tournament.id)">
+              <div class="tournament-info">
+                <span class="tournament-name">{{ tournament.name }}</span>
+                <span class="tournament-date">
+                  {{ formatDate(tournament.start_date) }} - {{ formatDate(tournament.end_date) }}
+                </span>
+              </div>
+              <i class="fas fa-chevron-right arrow-icon"></i>
+            </li>
+          </ul>
+          <p v-else class="empty-message">Игрок еще не участвовал в турнирах</p>
+        </div>
+      </div>
+
+      <div class="section-container" v-if="player.team && player.team.members.length">
+        <h3 class="section-title">
+          <i class="fas fa-users"></i> Состав команды
+        </h3>
+        <div class="section-content">
+          <ul class="team-members">
+            <li v-for="member in player.team.members" :key="member.id" 
+                class="team-member" 
+                @click="goToPlayerProfile(member.id)">
+              <span class="member-name">{{ member.name }}</span>
+              <i class="fas fa-chevron-right arrow-icon"></i>
+            </li>
+          </ul>
+        </div>
+      </div>
     </div>
-  </div>
-
-  <h3 class="history-title">История участия в турнирах</h3>
-  <ul class="tournament-history">
-    <li v-for="tournament in tournaments" :key="tournament.id" 
-        class="tournament-item"
-        @click="goToTournament(tournament.id)">
-      <span class="tournament-name">{{ tournament.name }}</span>
-      <span class="tournament-result">
-        {{ formatDate(tournament.start_date) }} - {{ formatDate(tournament.end_date) }}
-      </span>
-    </li>
-  </ul>
-
-  <div v-if="player.team && player.team.members.length" class="team-members">
-    <h3>Состав команды:</h3>
-    <ul>
-      <li v-for="member in player.team.members" :key="member.id" 
-          class="team-member" 
-          @click="goToPlayerProfile(member.id)">
-        <span class="member-name">{{ member.name }}</span>
-        <i class="fas fa-chevron-right"></i>
-      </li>
-    </ul>
-  </div>
-</div>
   </div>
 </template>
 
@@ -80,12 +100,12 @@ export default {
   },
   computed: {
     avatarUrl() {
-    if (this.player.avatar) {
-      return `http://event-edge-su/storage/${this.player.avatar}`;
+      if (this.player.avatar) {
+        return `http://event-edge-su/storage/${this.player.avatar}`;
+      }
+      return "https://www.gravatar.com/avatar/?d=mp";
     }
-    return "https://www.gravatar.com/avatar/?d=mp";
-  }
-},
+  },
   methods: {
     async fetchPlayerProfile(playerId) {
       this.isLoading = true;
@@ -118,159 +138,263 @@ export default {
 
 <style scoped>
 .profile-container {
-  max-width: 600px;
+  max-width: 800px;
   margin: 100px auto;
-  padding: 20px;
-  background: #1e1e1e;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  text-align: center;
+  padding: 30px;
 }
 
 .title {
-  font-size: 2rem;
+  font-size: 2.2rem;
   color: #fff;
-  margin-bottom: 20px;
+  margin-bottom: 30px;
+  text-align: center;
+  font-weight: 600;
+  background: linear-gradient(90deg, #630181, #9500ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.profile-info {
+.profile-card {
+  background: linear-gradient(145deg, #2c2c2c, #1a1a1a);
+  border-radius: 15px;
+  padding: 30px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  margin-bottom: 30px;
+  border: 1px solid rgba(182, 0, 254, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, #630181, #9500ff);
+}
+
+.profile-header {
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 20px;
-  background: #333;
-  border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  gap: 30px;
 }
 
-.avatar img {
-  width: 100px;
-  height: 100px;
+.avatar-container {
+  width: 120px;
+  height: 120px;
   border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #630181;
+  background: #333;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.avatar-container:hover .avatar-image {
+  transform: scale(1.05);
+}
+
+.details {
+  flex: 1;
 }
 
 .details h2 {
-  font-size: 1.5rem;
+  font-size: 1.8rem;
   color: #fff;
+  margin-bottom: 10px;
+  font-weight: 600;
 }
 
 .details p {
-  margin: 5px 0;
-  font-size: 1rem;
-  color: #bbb;
+  margin: 8px 0;
+  font-size: 1.1rem;
+  color: #d0d0d0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.history-title {
-  margin-top: 30px;
-  font-size: 1.25rem;
-  font-weight: bold;
+.details p i {
+  color: #630181;
+  font-size: 0.9rem;
+  width: 20px;
+  text-align: center;
+}
+
+.section-container {
+  background: linear-gradient(145deg, #2c2c2c, #1a1a1a);
+  border-radius: 15px;
+  padding: 25px;
+  margin-bottom: 30px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(182, 0, 254, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.section-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, #630181, #9500ff);
+}
+
+.section-title {
+  font-size: 1.4rem;
+  font-weight: 600;
   color: #fff;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.tournament-history {
+.section-title i {
+  color: #630181;
+}
+
+.section-content {
+  padding: 10px 0;
+}
+
+.tournament-history, .team-members {
   list-style: none;
   padding: 0;
+  margin: 0;
 }
 
-.tournament-history li {
-  padding: 12px;
-  border-bottom: 1px solid #444;
-  display: flex;
-  justify-content: space-between;
-  font-size: 1rem;
-  color: #bbb;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.tournament-history li:hover {
-  background: rgba(255, 255, 255, 0.05);
-  transform: translateX(5px);
-}
-
-.tournament-name {
-  font-weight: bold;
-  color: #fff;
-}
-
-.tournament-result {
-  color: #aaa;
-}
-
-.team-members {
-  margin-top: 20px;
-  text-align: left;
-}
-
-.team-members h3 {
-  font-size: 1.2rem;
-  display: flex;
-  color: #fff;
-  justify-content: center;
-}
-
-.team-members ul {
-  list-style: none;
-  padding: 0;
-}
-
-.team-member {
-  padding: 12px;
-  border-bottom: 1px solid #444;
+.tournament-item, .team-member {
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 10px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 1rem;
-  color: #ffffff;
   cursor: pointer;
   transition: all 0.3s ease;
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid transparent;
 }
 
-.team-member:hover {
-  background: rgba(255, 255, 255, 0.05);
+.tournament-item:hover, .team-member:hover {
+  background: rgba(99, 1, 129, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  border-color: rgba(182, 0, 254, 0.2);
+}
+
+.tournament-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.tournament-name, .member-name {
+  font-weight: 600;
+  color: #fff;
+  font-size: 1.1rem;
+}
+
+.tournament-date {
+  color: #aaa;
+  font-size: 0.9rem;
+}
+
+.arrow-icon {
+  color: #630181;
+  opacity: 0.6;
+  transition: all 0.3s ease;
+}
+
+.tournament-item:hover .arrow-icon, .team-member:hover .arrow-icon {
+  opacity: 1;
   transform: translateX(5px);
 }
 
-.team-member i {
-  color: #630181;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.team-member:hover i {
-  opacity: 1;
-}
-
-.member-name {
-  font-weight: 500;
+.loading, .error-message {
+  text-align: center;
+  padding: 40px;
+  border-radius: 15px;
+  background: linear-gradient(145deg, #2c2c2c, #1a1a1a);
+  margin: 30px 0;
+  font-size: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
 }
 
 .loading {
   color: #fff;
-  font-size: 1.5rem;
+}
+
+.loading i {
+  color: #630181;
+  font-size: 2rem;
+  margin-bottom: 10px;
 }
 
 .error-message {
-  color: red;
-  font-size: 1.2rem;
+  color: #ff6b6b;
+  border: 1px solid rgba(255, 107, 107, 0.3);
 }
 
-.edit-button {
-  margin-top: 20px;
-  padding: 10px 15px;
-  font-size: 1rem;
-  background-color: #444;
-  color: #fff;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: 0.3s;
+.error-message i {
+  font-size: 2rem;
+  margin-bottom: 10px;
 }
 
-.edit-button:hover {
-  background-color: #666;
+.empty-message {
+  text-align: center;
+  color: #aaa;
+  padding: 20px;
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .profile-container {
+    padding: 20px;
+    margin: 80px auto 30px;
+        width: 80%;
+  }
+  
+  .profile-header {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .title {
+    font-size: 1.8rem;
+  }
+  
+  .details h2 {
+    font-size: 1.6rem;
+  }
+  
+  .details p {
+    justify-content: center;
+  }
+  
+  .tournament-item, .team-member {
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
+  }
+  
+  .arrow-icon {
+    display: none;
+  }
 }
 </style>

@@ -17,19 +17,46 @@
         <p><strong>Стадия:</strong> {{ tournament.stage?.name || "Не указано" }}</p>
       </div>
 
-      <!-- Передаем ID турнира в TournamentBracket -->
-      <TournamentBracket :tournamentId="tournament.id" />
-      <div class="status-message">
-    <BaseButton 
-      v-if="isUpcoming" 
-      @click="registerForTournament"
-      customClass="details-button"
-    >
-      Регистрация
-    </BaseButton>
+      <!-- Секция с командами-участниками -->
+      <div class="teams-section">
+        <h2>Команды-участники</h2>
+        <div v-if="loadingTeams" class="loading">Загрузка списка команд...</div>
+        <div v-else-if="teamsError" class="error">{{ teamsError }}</div>
+        <div v-else>
+          <div v-if="teams.length > 0" class="teams-list">
+            <div v-for="team in teams" :key="team.id" class="team-card">
+              <div class="team-info">
+                <h3>{{ team.name }}</h3>
+                <p><strong>Статус:</strong> {{ getStatusText(team.status) }}</p>
+                <p><strong>Капитан:</strong> ID {{ team.captain_id }}</p>
+              </div>
+              <router-link 
+                v-if="isOrganizer"
+                :to="`/team/${team.id}`" 
+                class="details-button"
+              >
+                Подробнее
+              </router-link>
+            </div>
+          </div>
+          <div v-else class="no-teams">
+            В турнире пока нет зарегистрированных команд
+          </div>
+        </div>
+      </div>
 
-    <p v-else-if="isFinished" class="tournament-ended">Турнир завершён</p>
-  </div>
+      <TournamentBracket :tournamentId="tournament.id" />
+      
+      <div class="status-message">
+        <BaseButton 
+          v-if="isUpcoming" 
+          @click="registerForTournament"
+          customClass="details-button"
+        >
+          Регистрация
+        </BaseButton>
+        <p v-else-if="isFinished" class="tournament-ended">Турнир завершён</p>
+      </div>
     </div>
   </div>
 </template>
@@ -45,24 +72,55 @@ const route = useRoute();
 const router = useRouter();
 
 const tournament = ref({});
+const teams = ref([]);
 const loading = ref(true);
+const loadingTeams = ref(false);
 const error = ref(null);
+const teamsError = ref(null);
 
 const isUpcoming = computed(() => new Date(tournament.value.start_date) > new Date());
 const isFinished = computed(() => new Date(tournament.value.end_date) < new Date());
+const isOrganizer = computed(() => {
+  // Логика проверки, является ли текущий пользователь организатором
+  const user = JSON.parse(localStorage.getItem('user'));
+  return user && user.id === tournament.value.user_id;
+});
 
 const formatDate = (date) => {
   return new Date(date).toLocaleString("ru-RU");
 };
 
+const getStatusText = (status) => {
+  const statusMap = {
+    'active': 'Активна',
+    'inactive': 'Неактивна',
+    'pending': 'На рассмотрении'
+  };
+  return statusMap[status] || status;
+};
+
 const fetchTournamentDetails = async (tournamentId) => {
   try {
+    loading.value = true;
     const response = await axios.get(`http://event-edge-su/api/guest/tournaments/${tournamentId}`);
     tournament.value = response.data;
+    await fetchTournamentTeams(tournamentId);
   } catch (err) {
-    error.value = "Ошибка загрузки данных. Попробуйте позже.";
+    error.value = "Ошибка загрузки данных турнира. Попробуйте позже.";
   } finally {
     loading.value = false;
+  }
+};
+
+const fetchTournamentTeams = async (tournamentId) => {
+  try {
+    loadingTeams.value = true;
+    const response = await axios.get(`http://event-edge-su/api/guest/tournaments/${tournamentId}/teams`);
+    teams.value = response.data.teams || [];
+  } catch (err) {
+    teamsError.value = "Ошибка загрузки списка команд. Попробуйте позже.";
+  } finally {
+    loadingTeams.value = false;
   }
 };
 
@@ -74,7 +132,7 @@ const registerForTournament = () => {
       tournamentName: tournament.value.name 
     }
   });
-}
+};
 
 onMounted(async () => {
   const tournamentId = route.params.id;
@@ -90,7 +148,6 @@ watch(
   },
   { immediate: true }
 );
-
 </script>
 
 <style scoped>
@@ -125,67 +182,62 @@ watch(
   margin-bottom: 20px;
 }
 
-.teams-list {
-  margin-top: 20px;
-  padding: 15px;
+.teams-section {
+  margin-top: 30px;
   background: #2c2c2c;
+  padding: 20px;
   border-radius: 8px;
-  text-align: left;
 }
 
-.teams-list h2 {
+.teams-section h2 {
   font-size: 22px;
-  margin-bottom: 10px;
+  margin-bottom: 15px;
   text-align: center;
 }
 
-.teams-list ul {
-  list-style-type: none;
-  padding: 0;
+.teams-list {
+  display: grid;
+  gap: 15px;
 }
 
-.teams-list li {
-  font-size: 18px;
-  padding: 8px;
-  border-bottom: 1px solid #444;
-}
-
-.teams-list li:last-child {
-  border-bottom: none;
-}
-
-.register-button {
-  background-color: #ffffff;
-  color: rgb(0, 0, 0);
-  padding: 12px 24px;
+.team-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: #3a3a3a;
   border-radius: 8px;
-  font-size: 16px;
-  transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
-  outline: none;
-  border: 2px solid transparent;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-  display: inline-block;
+}
+
+.team-info h3 {
+  margin: 0 0 5px 0;
+  color: #fff;
+}
+
+.team-info p {
+  margin: 3px 0;
+  color: #ccc;
+}
+
+.no-teams {
   text-align: center;
-  text-decoration: none;
+  padding: 20px;
+  color: #aaa;
 }
 
-.register-button:hover {
-  transform: scale(1.05);
-  color: #ffffff;
-}
 
-.tournament-ended {
-  font-size: 18px;
-  font-weight: bold;
-  color: #ff6347;
+.status-message {
+  margin-top: 20px;
 }
-
 .details-button {
   padding: 8px 20px;
   border-radius: 8px;
   text-decoration: none;
   display: inline-block;
 }
-
+.tournament-ended {
+  font-size: 18px;
+  font-weight: bold;
+  color: #ff6347;
+}
 </style>

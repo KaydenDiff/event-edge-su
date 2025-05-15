@@ -42,7 +42,24 @@
         {{ isMatchInBracket ? 'Матч уже в сетке' : 'Добавить в сетку' }}
       </BaseButton>
     </div>
+    <div class="match-actions">
+      <BaseButton customClass="details-btn" @click="editMatch">Редактировать</BaseButton>
+      <BaseButton customClass="details-btn" @click="showDeleteConfirmation(match)">Удалить</BaseButton>
+    </div>
   </div>
+  
+  <!-- Moved dialog outside of the card to be fullscreen -->
+  <teleport to="body" v-if="showDeleteDialog">
+    <div class="confirmation-dialog">
+      <div class="dialog-content">
+        <p>Вы точно хотите удалить матч между "{{ getTeamName(matchToDelete?.team_1_id) }}" и "{{ getTeamName(matchToDelete?.team_2_id) }}"?</p>
+        <div class="dialog-actions">
+          <BaseButton customClass="details-btn" @click="confirmDelete">Да</BaseButton>
+          <BaseButton customClass="details-btn" @click="cancelDelete">Нет</BaseButton>
+        </div>
+      </div>
+    </div>
+  </teleport>
 </template>
 
 <script>
@@ -74,6 +91,9 @@ export default {
       retryCount: 0,
       maxRetries: 3,
       retryDelay: 1000, // 1 second initial delay
+      showDeleteDialog: false,
+      matchToDelete: null,
+      teams: []
     };
   },
   computed: {
@@ -112,6 +132,20 @@ export default {
           stageName: this.match.stage_name,
         }
       });
+    },
+    getTeamName(teamId) {
+      const team = this.teams.find(t => t.id === teamId);
+      return team ? team.name : 'Неизвестная команда';
+    },
+    showDeleteConfirmation(match) {
+      this.matchToDelete = match;
+      this.fetchTeamsForTournament(match.tournament_id).then(() => {
+        this.showDeleteDialog = true;
+      });
+    },
+    editMatch() {
+      // Отправляем событие для редактирования этого матча
+      this.$emit('edit-match', this.match.id);
     },
     formatDate(date) {
       const options = { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' };
@@ -426,7 +460,50 @@ export default {
 
       console.log("Сформированные стадии:", stagesArray);
       return stagesArray;
-    }
+    },
+    async fetchTeamsForTournament(tournamentId) {
+      try {
+        if (!tournamentId) return;
+        
+        const res = await fetch(`http://event-edge-su/api/guest/tournaments/${tournamentId}/teams`);
+        if (!res.ok) throw new Error('Ошибка загрузки команд');
+        
+        const data = await res.json();
+        this.teams = [...(data.teams || [])];
+      } catch (e) {
+        console.error('Ошибка загрузки команд:', e);
+      }
+    },
+    async confirmDelete() {
+      if (!this.matchToDelete) return;
+  
+      const user = JSON.parse(localStorage.getItem('user'));
+      if (!user || !user.token) return;
+  
+      try {
+        const res = await fetch(`http://event-edge-su/api/admin/game-matches/delete/${this.matchToDelete.id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+  
+        if (!res.ok) throw new Error('Ошибка удаления матча');
+  
+        // Emit an event to notify the parent component about the deletion
+        this.$emit('match-deleted', this.matchToDelete.id);
+      } catch (e) {
+        console.error('Ошибка удаления матча:', e);
+      } finally {
+        this.showDeleteDialog = false;
+        this.matchToDelete = null;
+      }
+    },
+    cancelDelete() {
+      this.showDeleteDialog = false;
+      this.matchToDelete = null;
+    },
   }
 };
 </script>
@@ -441,11 +518,9 @@ export default {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   position: relative;
   overflow: hidden;
-  width: calc(33.333% - 20px);
-  margin: 10px;
-  display: inline-block;
-  vertical-align: top;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
 .match-card::before {
@@ -465,6 +540,27 @@ export default {
 
 .match-header {
   margin-bottom: 15px;
+}
+
+.match-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+  margin-top: auto;
+  padding-top: 15px;
+}
+
+.match-actions button {
+  flex: 1;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.match-actions button:hover {
+  transform: translateY(-2px);
 }
 
 .tournament-name {
@@ -575,9 +671,67 @@ export default {
   box-shadow: none;
 }
 
+.confirmation-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+}
+
+.dialog-content {
+  background: linear-gradient(145deg, #2c2c2c, #1a1a1a);
+  padding: 30px;
+  border-radius: 15px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(182, 0, 254, 0.1);
+}
+
+.dialog-content p {
+  font-size: 1.2rem;
+  color: #ffffff;
+  margin-bottom: 25px;
+  text-align: center;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.dialog-actions button {
+  padding: 12px 30px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dialog-actions button:first-child {
+  background: linear-gradient(45deg, #630181, #ff6a1f);
+  color: white;
+}
+
+.dialog-actions button:last-child {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.dialog-actions button:hover {
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
 @media (max-width: 1200px) {
   .match-card {
-    width: calc(50% - 20px);
+    width: 100%;
   }
 }
 

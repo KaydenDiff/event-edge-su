@@ -1,48 +1,78 @@
 <template>
-  <div>
+  <div class="notification-wrapper">
     <!-- Кнопка уведомлений -->
     <button class="notification-btn" @click="toggleNotifications">
-      <i class="fa fa-bell"></i>
+      <i class="fas fa-bell"></i>
       <span class="notification-count" v-if="unreadCount > 0">
-        {{ unreadCount }}
+        {{ unreadCount > 99 ? '99+' : unreadCount }}
       </span>
     </button>
 
     <!-- Выпадающий список уведомлений -->
     <transition name="fade">
       <div v-if="showNotifications" class="notification-dropdown">
-        <h3>Уведомления</h3>
-        <!-- Список всех уведомлений (показываются все или только непрочитанные) -->
-        <ul v-if="showAllNotificationsView">
-          <li v-for="notification in notifications" :key="notification.id">
-            {{ notification.message }}
-          </li>
-        </ul>
-        
-        <!-- Список только непрочитанных уведомлений -->
-        <ul v-else>
-          <li v-for="notification in unreadNotifications" :key="notification.id">
-            {{ notification.message }}
-          </li>
-        </ul>
+        <div class="notification-header">
+          <h3>Уведомления</h3>
+          <div class="notification-actions">
+            <button @click="toggleView" class="toggle-view-btn">
+              {{ showAllNotificationsView ? 'Непрочитанные' : 'Все' }}
+            </button>
+            <button @click="markAllAsRead" class="mark-all-btn" v-if="unreadCount > 0">
+              <i class="fas fa-check-double"></i>
+            </button>
+          </div>
+        </div>
 
-        <!-- Сообщение, если нет уведомлений -->
-        <p v-if="notifications.length === 0" class="no-notifications">Нет уведомлений</p>
+        <div class="notification-content">
+          <!-- Список всех уведомлений -->
+          <div v-if="showAllNotificationsView">
+            <notification-card 
+              v-for="notification in notifications" 
+              :key="notification.id" 
+              :notification="notification" 
+              @mark-read="markAsRead"
+            />
+          </div>
+          
+          <!-- Список только непрочитанных уведомлений -->
+          <div v-else>
+            <notification-card 
+              v-for="notification in unreadNotifications" 
+              :key="notification.id" 
+              :notification="notification" 
+              @mark-read="markAsRead"
+            />
+          </div>
 
-        <!-- Кнопка для отображения всех уведомлений -->
-        <button v-if="notifications.length > unreadNotifications.length" @click="toggleShowAllNotifications" class="show-all-btn">
-          Все уведомления
-        </button>
+          <!-- Сообщение, если нет уведомлений -->
+          <div class="no-notifications" v-if="displayedNotifications.length === 0">
+            <i class="fas fa-bell-slash"></i>
+            <p>{{ showAllNotificationsView ? 'Нет уведомлений' : 'Нет новых уведомлений' }}</p>
+          </div>
+        </div>
+
+        <div class="notification-footer">
+          <router-link to="/notifications" class="view-all-link" @click="showNotifications = false">
+            Посмотреть все
+          </router-link>
+        </div>
       </div>
     </transition>
+
+    <!-- Overlay для закрытия при клике вне компонента -->
+    <div v-if="showNotifications" class="notification-overlay" @click="showNotifications = false"></div>
   </div>
 </template>
 
 <script>
-import axios from "axios";
+import NotificationCard from "./Notifications.vue";
+import { inject } from 'vue';
 
 export default {
   name: "NotificationButton",
+  components: {
+    NotificationCard
+  },
   data() {
     return {
       notifications: [], // Список всех уведомлений
@@ -50,100 +80,176 @@ export default {
       showNotifications: false, // Показывать ли список уведомлений
       showAllNotificationsView: false, // Показывать ли все уведомления
       unreadCount: 0, // Количество непрочитанных уведомлений
+      loading: false, // Загрузка данных
+      error: null, // Ошибка при загрузке
+      refreshInterval: null // Интервал для автоматического обновления
     };
+  },
+  computed: {
+    displayedNotifications() {
+      return this.showAllNotificationsView ? this.notifications : this.unreadNotifications;
+    }
+  },
+  setup() {
+    // Инжектим сервис уведомлений из плагина
+    const notificationsService = inject('notifications');
+    return { notificationsService };
   },
   mounted() {
     this.fetchNotifications(); // Загрузка при монтировании
+    
+    // Устанавливаем интервал для проверки новых уведомлений (каждые 30 секунд)
+    this.refreshInterval = setInterval(() => {
+      if (!this.showNotifications) { // Обновляем только если панель закрыта
+        this.fetchNotifications(true); // Silent refresh
+      }
+    }, 30000);
+    
+    // Добавляем обработчик для закрытия при клике вне компонента
+    document.addEventListener('click', this.closeOnClickOutside);
+    
+    // Добавляем слушатель для обновления уведомлений
+    document.addEventListener('refresh-notifications', this.handleRefreshEvent);
+  },
+  beforeUnmount() {
+    // Очищаем интервал и удаляем обработчики при размонтировании компонента
+    clearInterval(this.refreshInterval);
+    document.removeEventListener('click', this.closeOnClickOutside);
+    document.removeEventListener('refresh-notifications', this.handleRefreshEvent);
   },
   methods: {
-    async fetchNotifications() {
+    async fetchNotifications(silent = false) {
+      if (this.loading && !silent) return;
+      
+      this.loading = true;
+      if (!silent) this.error = null;
+      
       try {
-        const user = JSON.parse(localStorage.getItem("user"));
-        if (!user || !user.token) {
-          console.error("Токен не найден");
-          return;
+        // Используем плагин для получения уведомлений
+        const result = await this.notificationsService.fetchUserNotifications();
+        
+        if (result.success) {
+          this.notifications = result.notifications || [];
+          // Подсчет непрочитанных уведомлений
+          this.unreadNotifications = this.notifications.filter(n => n.status === "unread");
+          this.unreadCount = result.unreadCount || this.unreadNotifications.length;
+        } else {
+          console.error("Ошибка при загрузке уведомлений:", result.error);
+          if (!silent) this.error = result.error || "Не удалось загрузить уведомления";
         }
-
-        const response = await axios.get("http://event-edge-su/api/notifications", {
-          headers: {
-            Authorization: `Bearer ${user.token}`,
-            "Content-Type": "application/json",
-          },
-        });
-
-        this.notifications = response.data.notifications;
-        // Подсчет непрочитанных уведомлений
-        this.unreadNotifications = this.notifications.filter(n => n.status === "unread");
-        this.unreadCount = this.unreadNotifications.length;
       } catch (error) {
-        console.error("Ошибка при загрузке уведомлений:", error);
+        if (!silent) {
+          console.error("Ошибка при загрузке уведомлений:", error);
+          this.error = "Не удалось загрузить уведомления";
+        }
+      } finally {
+        this.loading = false;
       }
     },
 
-    async markNotificationsAsRead() {
+    async markAsRead(id) {
       try {
-        const user = JSON.parse(localStorage.getItem("user"));
-        if (!user || !user.token) {
-          console.error("Токен не найден");
-          return;
+        // Обновляем локально сразу для лучшего UX
+        const notification = this.notifications.find(n => n.id === id);
+        if (notification) {
+          notification.status = 'read';
+          this.unreadNotifications = this.notifications.filter(n => n.status === "unread");
+          this.unreadCount = this.unreadNotifications.length;
         }
-        // Отправляем запрос на сервер для пометки всех уведомлений как прочитанных
-        const response = await axios.get("http://event-edge-su/api/notifications/unread", {
-          headers: {
-            Authorization: `Bearer ${user.token}`,
-            "Content-Type": "application/json",
-          },
+        
+        // Используем плагин для отметки уведомления как прочитанное
+        const result = await this.notificationsService.markAsRead(id);
+        
+        if (!result.success) {
+          console.error("Ошибка при отметке уведомления:", result.error);
+          // В случае ошибки перезагружаем все уведомления
+          this.fetchNotifications(true);
+        }
+      } catch (error) {
+        console.error("Ошибка при обновлении статуса уведомления:", error);
+        // В случае ошибки перезагружаем все уведомления
+        this.fetchNotifications(true);
+      }
+    },
+
+    async markAllAsRead() {
+      try {
+        // Обновляем локально сразу для лучшего UX
+        this.notifications.forEach(notification => {
+          notification.status = 'read';
         });
-        if (response.status === 200) {
-          // Обновляем список уведомлений локально
-          this.notifications.forEach(notification => {
-            notification.status = 'read'; // Устанавливаем статус как прочитано
-          });
-          
+        this.unreadNotifications = [];
+        this.unreadCount = 0;
+        
+        // Используем плагин для отметки всех уведомлений как прочитанные
+        const result = await this.notificationsService.markAllAsRead();
+        
+        if (!result.success) {
+          console.error("Ошибка при отметке всех уведомлений:", result.error);
+          // В случае ошибки перезагружаем все уведомления
+          this.fetchNotifications(true);
         }
       } catch (error) {
         console.error("Ошибка при обновлении статуса уведомлений:", error);
+        // В случае ошибки перезагружаем все уведомления
+        this.fetchNotifications(true);
       }
     },
 
     toggleNotifications() {
       this.showNotifications = !this.showNotifications;
       if (this.showNotifications) {
-        // Когда уведомления открыты, обновляем их только при переключении на все уведомления
-        if (!this.showAllNotificationsView) {
-          // Помечаем все уведомления как прочитанные только при переключении на все
-          this.markNotificationsAsRead();
-          this.unreadCount = 0;
-        }
+        // Обновляем данные при открытии панели
+        this.fetchNotifications();
       }
     },
 
-    toggleShowAllNotifications() {
+    toggleView() {
       this.showAllNotificationsView = !this.showAllNotificationsView;
-      if (this.showAllNotificationsView) {
-        // При переключении на все уведомления, помечаем все как прочитанные
-        this.markNotificationsAsRead();
-        this.unreadCount = 0;
+    },
+    
+    closeOnClickOutside(event) {
+      const notificationWrapper = this.$el.querySelector('.notification-wrapper');
+      const notificationButton = this.$el.querySelector('.notification-btn');
+      
+      // Проверяем, что клик был не внутри компонента и не на кнопке
+      if (this.showNotifications && 
+          notificationWrapper && 
+          !notificationWrapper.contains(event.target) &&
+          !notificationButton.contains(event.target)) {
+        this.showNotifications = false;
       }
     },
+    
+    handleRefreshEvent() {
+      this.fetchNotifications();
+    }
   },
 };
 </script>
 
 <style scoped>
+.notification-wrapper {
+  position: relative;
+}
+
 .notification-btn {
   position: fixed;
   bottom: 20px;
   right: 20px;
   background-color: #630181;
   color: white;
-  padding: 15px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   border: none;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   font-size: 20px;
   cursor: pointer;
   z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: background-color 0.3s ease, transform 0.2s ease;
 }
 
@@ -153,85 +259,157 @@ export default {
 }
 
 .notification-btn i {
-  font-size: 1.5rem;
+  font-size: 1.2rem;
 }
 
 .notification-count {
   position: absolute;
   top: -5px;
   right: -5px;
-  background-color: red;
-  color: rgb(0, 0, 0);
-  font-size: 0.9rem;
+  background-color: #ff3b30;
+  color: white;
+  font-size: 0.7rem;
   font-weight: bold;
   border-radius: 50%;
-  width: 18px;
+  min-width: 18px;
   height: 18px;
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 0 4px;
 }
 
 .notification-dropdown {
   position: fixed;
-  bottom: 70px;
-  right: 80px;
-  width: 250px;
-  background: rgb(77, 77, 77);
-  border-radius: 8px;
-  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-  padding: 10px;
+  bottom: 80px;
+  right: 20px;
+  width: 320px;
+  max-width: 90vw;
+  background: linear-gradient(145deg, #2c2c2c, #1a1a1a);
+  border-radius: 12px;
+  box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.3);
   z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
+  overflow: hidden;
+  border: 1px solid rgba(182, 0, 254, 0.1);
 }
 
-.notification-dropdown h3 {
+.notification-header {
+  padding: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.notification-header h3 {
   font-size: 16px;
-  margin-bottom: 10px;
-}
-
-.notification-dropdown ul {
-  list-style: none;
-  padding: 0;
+  color: #fff;
   margin: 0;
+  font-weight: 600;
 }
 
-.notification-dropdown li {
-  padding: 8px;
-  border-bottom: 1px solid #ddd;
-  font-size: 14px;
+.notification-actions {
+  display: flex;
+  gap: 10px;
 }
 
-.notification-dropdown li:last-child {
-  border-bottom: none;
-}
-
-.no-notifications {
-  font-size: 14px;
-  text-align: center;
-  color: #888;
-}
-
-.show-all-btn {
-  background: #630181;
-  color: white;
+.toggle-view-btn, .mark-all-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
   border: none;
   padding: 5px 10px;
   border-radius: 4px;
+  font-size: 0.8rem;
   cursor: pointer;
-  font-size: 12px;
-  margin-top: 10px;
   transition: background 0.3s ease;
 }
 
-.show-all-btn:hover {
-  background: #8a2be2;
+.toggle-view-btn:hover, .mark-all-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.mark-all-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  padding: 0;
+}
+
+.notification-content {
+  padding: 10px;
+  overflow-y: auto;
+  max-height: 400px;
+  flex-grow: 1;
+}
+
+.no-notifications {
+  padding: 30px 0;
+  text-align: center;
+  color: #aaa;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.no-notifications i {
+  font-size: 24px;
+  opacity: 0.5;
+}
+
+.no-notifications p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.notification-footer {
+  padding: 10px 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+}
+
+.view-all-link {
+  color: #630181;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.view-all-link:hover {
+  color: #8a2be2;
+  text-decoration: underline;
+}
+
+.notification-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  background: transparent;
 }
 
 .fade-enter-active, .fade-leave-active {
-  transition: opacity 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
+  transform: translateY(20px);
+}
+
+@media (max-width: 480px) {
+  .notification-dropdown {
+    width: 90vw;
+    right: 5vw;
+  }
 }
 </style>

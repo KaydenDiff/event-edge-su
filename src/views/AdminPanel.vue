@@ -16,8 +16,8 @@
         </div>
 
         <div class="guide-sections">
-          <div class="guide-section">
-            <h4><i class="fas fa-users"></i> Управление пользователями</h4>
+          <div class="guide-section" id="admin-users">
+            <h4 @click="goToSection('users')" class="clickable-header"><i class="fas fa-users"></i> Управление пользователями</h4>
             <div class="section-content">
               <p>В этом разделе вы можете:</p>
               <ul>
@@ -29,8 +29,8 @@
             </div>
           </div>
 
-          <div class="guide-section">
-            <h4><i class="fas fa-trophy"></i> Управление турнирами</h4>
+          <div class="guide-section" id="admin-tournaments">
+            <h4 @click="goToSection('tournaments')" class="clickable-header"><i class="fas fa-trophy"></i> Управление турнирами</h4>
             <div class="section-content">
               <p>Возможности раздела:</p>
               <ul>
@@ -42,8 +42,8 @@
             </div>
           </div>
 
-          <div class="guide-section">
-            <h4><i class="fas fa-gamepad"></i> Управление матчами</h4>
+          <div class="guide-section" id="admin-matches">
+            <h4 @click="goToSection('matches')" class="clickable-header"><i class="fas fa-gamepad"></i> Управление матчами</h4>
             <div class="section-content">
               <p>В этом разделе доступно:</p>
               <ul>
@@ -55,8 +55,8 @@
             </div>
           </div>
 
-          <div class="guide-section">
-            <h4><i class="fas fa-chart-bar"></i> Статистика</h4>
+          <div class="guide-section" id="admin-statistics">
+            <h4 @click="goToSection('statistics')" class="clickable-header"><i class="fas fa-chart-bar"></i> Статистика</h4>
             <div class="section-content">
               <p>Раздел предоставляет:</p>
               <ul>
@@ -68,8 +68,8 @@
             </div>
           </div>
 
-          <div class="guide-section">
-            <h4><i class="fas fa-sitemap"></i> Турнирные сетки</h4>
+          <div class="guide-section" id="admin-brackets">
+            <h4 @click="goToSection('tournament-basket')" class="clickable-header"><i class="fas fa-sitemap"></i> Турнирные сетки</h4>
             <div class="section-content">
               <p>Здесь вы можете:</p>
               <ul>
@@ -81,8 +81,8 @@
             </div>
           </div>
 
-          <div class="guide-section">
-            <h4><i class="fas fa-bell"></i> Уведомления</h4>
+          <div class="guide-section" id="admin-notifications">
+            <h4 @click="goToSection('notifications')" class="clickable-header"><i class="fas fa-bell"></i> Уведомления</h4>
             <div class="section-content">
               <p>Возможности раздела:</p>
               <ul>
@@ -93,9 +93,22 @@
               </ul>
             </div>
           </div>
+          
+          <div class="guide-section" id="admin-news">
+            <h4 @click="goToSection('news')" class="clickable-header"><i class="fas fa-newspaper"></i> Управление новостями</h4>
+            <div class="section-content">
+              <p>В этом разделе вы можете:</p>
+              <ul>
+                <li>Создавать новые статьи и новости</li>
+                <li>Редактировать существующие публикации</li>
+                <li>Управлять категориями новостей</li>
+                <li>Публиковать или скрывать новости</li>
+              </ul>
+            </div>
+          </div>
         </div>
 
-        <div class="admin-tips">
+        <div class="admin-tips" id="admin-tips">
           <h4><i class="fas fa-lightbulb"></i> Полезные советы</h4>
           <ul>
             <li>Регулярно проверяйте раздел уведомлений для своевременной реакции на запросы пользователей</li>
@@ -138,12 +151,16 @@
       <div v-if="pageContent === 'notifications'">
         <NotificationSection />
       </div>
+      
+      <!-- News Section -->
+      <div v-if="pageContent === 'news'">
+      <NewsSection/>
+      </div>
     </div>
     </div>
 </template>
 
 <script>
-import AdminSidebar from '@/components/AdminSidebar.vue';
 import TournamentCard from '@/components/TournamentCard.vue';
 import TournamentBasketAdmin from '@/components/TournamentBasketAdmin.vue';
 import MatchCard from '@/components/MatchCard.vue';
@@ -153,17 +170,20 @@ import MatchSection from '@/components/sections/MatchSection.vue';
 import TournamentsSection from '@/components/sections/TournamentsSection.vue';
 import UsersSection from '@/components/sections/UsersSection.vue';
 import NotificationSection from '@/components/sections/NotificationSection.vue';
-import { ref } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import axios from 'axios';
+import { useRoute, useRouter } from 'vue-router';
+import NewsSection from '@/components/sections/NewsSection.vue';
+
 
 export default {
   name: 'AdminPanel',
   components: {
-    AdminSidebar,
     StatsChart,
     TournamentCard,
     BaseButton,
     MatchSection,
+    NewsSection,
     MatchCard,
     TournamentBasketAdmin,
     TournamentsSection,
@@ -176,69 +196,86 @@ export default {
       default: 'home'
     }
   },
-  data() {
+  setup() {
+    const route = useRoute();
+    const router = useRouter();
+
+    const pageContent = ref('home');
+    const pageTitle = ref('Главная панель');
+    const tournaments = ref([]);
+    const teams = ref([]);
+    const showCreateMatchForm = ref(false);
+    const stages = ref([]);
+    const rounds = ref([]);
+    const isAdmin = ref(true);
+
+    // Обработка URL при загрузке компонента
+    onMounted(() => {
+      if (route.query.section) {
+        const section = route.query.section.replace('admin-', '');
+        updateContent(section);
+        pageContent.value = section;
+      }
+    });
+
+    // Следим за изменениями параметра section в URL
+    watch(() => route.query.section, (newSection) => {
+      if (newSection) {
+        const section = newSection.replace('admin-', '');
+        updateContent(section);
+        pageContent.value = section;
+      }
+    });
+
+    const updateContent = (section) => {
+      pageContent.value = section;
+      
+      if (section === 'home') {
+        pageTitle.value = 'Главная панель';
+      } else if (section === 'tournaments') {
+        pageTitle.value = 'Управление турнирами';
+      } else if (section === 'matches') {
+        pageTitle.value = 'Управление матчами';
+      } else if (section === 'tournament-basket') {
+        pageTitle.value = 'Управление турнирными сетками';
+      } else if (section === 'statistics') {
+        pageTitle.value = 'Просмотр статистики';
+      } else if (section === 'users') {
+        pageTitle.value = 'Управление пользователями';
+      } else if (section === 'notifications') {
+        pageTitle.value = 'Управление уведомлениями';
+      } else if (section === 'news') {
+        pageTitle.value = 'Управление новостями';
+      }
+    };
+
+    // Переход к разделу с обновлением URL
+    const goToSection = (section) => {
+      router.push({ 
+        path: route.path,
+        query: { 
+          ...route.query,
+          section: `admin-${section}` 
+        }
+      });
+      pageContent.value = section;
+      updateContent(section);
+    };
+
     return {
-      pageContent: 'home',
-      pageTitle: '', 
-      tournaments: [], 
-      teams: [],
-      showCreateMatchForm: false,
-      stages: [],
-      rounds: [],
-      isAdmin: true
+      pageContent,
+      pageTitle,
+      tournaments,
+      teams,
+      showCreateMatchForm,
+      stages,
+      rounds,
+      isAdmin,
+      updateContent,
+      goToSection
     };
   },
-  watch: {
-    selectedMenu: {
-      immediate: true,
-      handler(newValue) {
-        this.pageContent = newValue;
-        this.updateContent(newValue);
-      }
-    }
-  },
-  computed: {
-    filteredTeams() {
-      if (!this.newMatch.tournament_id) return [];
-
-      const tournament = this.tournaments.find(t => t.id === this.newMatch.tournament_id);
-
-      if (!tournament || !tournament.teams) return [];
-
-      return tournament.teams.map(team => ({
-        id: team.pivot.team_id,
-        name: team.name
-      }));
-    },
-    filteredTeam() {
-    if (!this.newMatch.tournament_id) return [];
-    return this.teams.filter(team => team.tournament_id === this.newMatch.tournament_id);
-  },
-  filteredMatches() {
-    if (!this.selectedTournament) return this.matches;
-    return this.matches.filter(match => match.tournament_id === this.selectedTournament);
-  }
-  },
   methods: {
-    updateContent(section) {
-    this.pageContent = section;
-    if (section === 'home') {
-      this.pageTitle = 'Главная панель';
-    } else if (section === 'tournaments') {
-      this.pageTitle = 'Управление турнирами';
-    } else if (section === 'matches') {
-      this.pageTitle = 'Управление матчами';
-    } else if (section === 'tournament-basket') {
-      this.pageTitle = 'Управление турнирными сетками';
-    } else if (section === 'statistics') {
-      this.pageTitle = 'Просмотр статистики';
-    } else if (section === 'users') {
-      this.pageTitle = 'Управление пользователями';
-    } else if (section === 'notifications') {
-      this.pageTitle = 'Управление уведомлениями';
-    } 
-  },
-
     async fetchTournaments() {
       try {
         const response = await fetch('http://event-edge-su/api/guest/tournaments');
@@ -276,10 +313,11 @@ export default {
         console.error('Ошибка удаления турнира:', error);
       }
     },
-      // Метод редактирования турнира
-  editTournament(id) {
-    this.$router.push({ name: 'EditTournament', params: { id } });
-  },
+    
+    // Метод редактирования турнира
+    editTournament(id) {
+      this.$router.push({ name: 'EditTournament', params: { id } });
+    },
 
     async fetchTeams() {
       try {
@@ -299,7 +337,7 @@ export default {
       } catch (error) {
         console.error('Ошибка загрузки стадий:', error);
       }
-    },
+    }
   },
   mounted() {
     this.fetchTeams?.();
@@ -346,7 +384,7 @@ export default {
 }
 
 .main-content {
-  margin-left: 250px;
+  margin-left: 100px;
   padding: 40px;
   width: calc(100% - 250px);
   overflow-y: auto; /* Оставляем прокрутку */
@@ -643,5 +681,76 @@ button:active {
   .welcome-section {
     padding: 15px;
   }
+}
+
+.help-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 15px;
+  padding: 8px 12px;
+  background-color: rgba(99, 1, 129, 0.1);
+  border-radius: 8px;
+  color: #630181;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.help-link:hover {
+  background-color: rgba(99, 1, 129, 0.2);
+  transform: translateY(-2px);
+}
+
+.help-link i {
+  font-size: 14px;
+}
+
+.clickable-header {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 15px;
+  border-radius: 8px;
+  background: rgba(99, 1, 129, 0.05);
+  border-left: 4px solid #630181;
+  margin-left: -15px;
+  margin-right: -15px;
+}
+
+.clickable-header:hover {
+  background: rgba(99, 1, 129, 0.15);
+  transform: translateX(5px);
+  box-shadow: 0 2px 10px rgba(99, 1, 129, 0.2);
+}
+
+.clickable-header i {
+  margin-right: 12px;
+  font-size: 1.2em;
+}
+
+.action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 2rem;
+  background-color: #3498db;
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin: 2rem auto;
+  transition: background-color 0.3s;
+}
+
+.action-button:hover {
+  background-color: #2980b9;
+}
+
+.action-button i {
+  margin-right: 10px;
+  font-size: 1.2rem;
 }
 </style>
