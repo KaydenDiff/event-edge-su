@@ -269,9 +269,6 @@ const clearForm = () => {
             Войти
           </BaseButton>
 
-          <div class="recovery-link">
-            <a href="#" @click.prevent="recoverPassword">восстановить доступ</a>
-          </div>
         </template>
 
         <!-- Форма регистрации -->

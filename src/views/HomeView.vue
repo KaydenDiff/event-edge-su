@@ -4,7 +4,7 @@
     <UpcomingTournaments :tournaments="upcomingTournaments" :loading="loading" :error="error" />
     <OrganizeTournamentSection />
     <StatisticsSection :tournaments="totalTournaments" :players="totalPlayers" :matches="totalMatches" />
-    <NotificationButton />
+
     <NewsAnnouncement />
   </div>
 </template>

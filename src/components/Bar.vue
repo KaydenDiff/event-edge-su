@@ -249,8 +249,13 @@ export default {
   overflow-y: auto;
   transition: all 0.3s ease;
   z-index: 1000;
+    scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
 }
-
+.sidebar::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+}
 .sidebar.collapsed {
   width: 80px;
   padding: 20px 10px;

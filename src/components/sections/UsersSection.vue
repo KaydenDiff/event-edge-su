@@ -133,28 +133,9 @@ export default {
         }
 
         // Проверяем обязательные поля
-        if (!requestData.name) {
-          error.value = 'Имя пользователя обязательно для заполнения'
-          return
-        }
-        if (!requestData.email) {
-          error.value = 'Email обязателен для заполнения'
-          return
-        }
-        if (!isEditing && !userData.password) {
-          error.value = 'Пароль обязателен для нового пользователя'
-          return
-        }
-        if (!requestData.role_id) {
-          error.value = 'Выберите роль пользователя'
-          return
-        }
-
-        // Добавляем пароль только при создании или если он был изменен
-        if (!isEditing || userData.password) {
-          requestData.password = userData.password
-          requestData.password_confirmation = userData.password
-        }
+      
+ 
+      
 
         let response
         if (isEditing && userId) {

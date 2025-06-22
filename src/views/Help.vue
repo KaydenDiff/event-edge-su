@@ -245,7 +245,6 @@ export default {
   text-align: center;
   margin-bottom: 40px;
   padding: 20px;
-  background: rgba(13, 13, 13, 1);
   border-radius: 10px;
 }
 

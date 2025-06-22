@@ -201,8 +201,8 @@
             description: props.tournament.description || '',
             start_date: formatDateTime(props.tournament.start_date),
             end_date: formatDateTime(props.tournament.end_date),
-            game_id: props.tournament.game_id,
-            stage_id: props.tournament.stage_id,
+          game_id: props.tournament.game?.id || '',
+          stage_id: props.tournament.stage?.id || '', 
             status: props.tournament.status || 'pending',
             teams: Array.isArray(props.tournament.teams) 
               ? props.tournament.teams.map(team => typeof team === 'object' ? team.id : team) 

@@ -18,7 +18,12 @@
           <div class="details">
             <h2>{{ user.name }}</h2>
             <p><i class="fas fa-envelope"></i> {{ user.email }}</p>
-            <p><i class="fas fa-users"></i> {{ user.team ? user.team.name : "Нет команды" }}</p>
+            <p v-if="user.team"><i class="fas fa-users"></i> {{ user.team.name }}</p>
+            <p v-else>
+              <span class="create-team-link" @click="goToCreateTeam">
+                <i class="fas fa-plus-circle"></i> Создать команду
+              </span>
+            </p>
           </div>
         </div>
 
@@ -77,6 +82,7 @@ export default {
   data() {
     return {
       user: {},
+     
       tournaments: [],
       isLoading: true,
       error: null,
@@ -132,11 +138,18 @@ export default {
     },
     goToTournament(tournamentId) {
       this.router.push(`/tournaments/${tournamentId}`);
-    }
+    },
+  
+    // В methods профиля:
+goToCreateTeam() {
+  // Получаем user из хранилища (должен содержать id)
+  const user = JSON.parse(localStorage.getItem('user'));
+  // Передаём параметры через props
+  this.$router.push({ path: `/create-team/${this.user.id}` });
+}
   }
 };
 </script>
-
 
 <style scoped>
 .profile-container {
@@ -144,7 +157,15 @@ export default {
   margin: 100px auto;
   padding: 30px;
 }
+.create-team-link {
+  color: #42b983;
+  cursor: pointer;
+  text-decoration: underline;
+}
 
+.create-team-link:hover {
+  color: #2c3e50;
+}
 .title {
   font-size: 2.2rem;
   color: #fff;

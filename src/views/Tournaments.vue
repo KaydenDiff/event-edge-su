@@ -229,7 +229,7 @@ const navigateToTournament = (tournament) => {
 const statusMap = {
   current: 'ongoing',
   upcoming: 'pending',
-  past: 'finished'
+  completed: 'completed'
 }
 
 onMounted(() => {

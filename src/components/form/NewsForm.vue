@@ -20,7 +20,7 @@
 
       <div class="form-group">
         <label>Категория*</label>
-        <select v-model="formData.category_id" required>
+        <select v-model="formData.category_id">
           <option v-for="category in categories" :key="category.id" :value="category.id">
             {{ category.name }}
           </option>
@@ -37,10 +37,34 @@
       </div>
 
       <div class="form-group">
-        <label>Изображение*</label>
-        <input type="file" @change="handleImageUpload" accept="image/*" required />
-      </div>
+          <label>Изображение</label>
+          <div class="image-upload-container">
+            <div class="upload-area">
+              <input 
+                type="file" 
+                @change="handleImageUpload" 
+                accept="image/*"
+                class="file-input" 
+                id="tournament-image"
+              />
+              <label for="tournament-image" class="upload-label">
+                <i class="upload-icon">+</i>
+                <span>{{ imagePreview ? 'Изменить изображение' : 'Выберите изображение' }}</span>
+              </label>
+            </div>
 
+            <div v-if="imagePreview" class="preview-container">
+              <div class="image-preview">
+                <img :src="imagePreview" alt="Preview" />
+                <button type="button" @click="removeImage" class="remove-image">×</button>
+              </div>
+              <div class="image-info">
+                <span class="file-name">{{ formData.image?.name || 'Текущее изображение' }}</span>
+                <span class="file-size" v-if="formData.image">{{ formatFileSize(formData.image?.size) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
       <div class="form-actions">
         <BaseButton type="button" @click="$emit('cancel')" customClass="btn-secondary">
           Отмена
@@ -72,6 +96,8 @@ export default {
   },
   setup(props, { emit }) {
     const isSubmitting = ref(false)
+    const imagePreview = ref(null)
+
     const formData = ref({
       title: '',
       description: '',
@@ -95,7 +121,10 @@ export default {
           content: props.news.content || '',
           category_id: props.news.category_id || '',
           status: props.news.status || 'draft',
-          image: null // Сохраняем изображение отдельно
+          image: null
+        }
+        if (props.news.image) {
+          imagePreview.value = props.news.image
         }
       }
     }
@@ -104,12 +133,39 @@ export default {
       const file = event.target.files[0]
       if (file) {
         formData.value.image = file
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          imagePreview.value = e.target.result
+        }
+        reader.readAsDataURL(file)
       }
+    }
+
+    const removeImage = () => {
+      formData.value.image = null
+      imagePreview.value = null
+      const fileInput = document.querySelector('.file-input')
+      if (fileInput) fileInput.value = ''
+    }
+
+    const formatFileSize = (bytes) => {
+      if (!bytes) return ''
+      const units = ['B', 'KB', 'MB', 'GB']
+      let size = bytes
+      let unitIndex = 0
+      while (size >= 1024 && unitIndex < units.length - 1) {
+        size /= 1024
+        unitIndex++
+      }
+      return `${size.toFixed(1)} ${units[unitIndex]}`
     }
 
     const handleSubmit = (event) => {
       event.preventDefault()
-      emit('submit', formData.value) // Передаем данные в родительский компонент
+      emit('submit', {
+        ...formData.value,
+        imagePreview: imagePreview.value
+      })
     }
 
     onMounted(() => {
@@ -120,8 +176,11 @@ export default {
       formData,
       categories,
       isSubmitting,
+      imagePreview,
       handleSubmit,
-      handleImageUpload
+      removeImage,
+      handleImageUpload,
+      formatFileSize
     }
   }
 }

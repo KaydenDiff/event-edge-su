@@ -97,7 +97,7 @@ onMounted(fetchNewsFeeds);
 <style scoped>
 .news-feeds-container {
   max-width: 1200px;
-  margin: 60px auto;
+  margin: 70px auto;
   padding: 1rem;
 }
 

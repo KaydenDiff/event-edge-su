@@ -16,19 +16,13 @@
             <div class="team-status">
               <span class="status-label status-active">Активна</span>
             </div>
-            <div class="team-info">
-              <div class="info-item">
-                <i class="fas fa-clock"></i>
-                <span>Создана: {{ formatDate(userTeam.created_at) }}</span>
-              </div>
-            </div>
+         
             <div class="team-members-section">
               <h4 class="members-title">Участники команды:</h4>
               <div class="team-members">
                 <div v-for="member in userTeam.members" :key="member.id" class="member-item">
                   <i class="fas fa-user"></i>
                   <span class="member-name">{{ member.name }}</span>
-                  <span class="member-email">{{ member.email }}</span>
                   <span v-if="member.id === userTeam.captain_id" class="captain-badge">
                     <i class="fas fa-crown"></i> Капитан
                   </span>
@@ -41,7 +35,7 @@
 
       <h2 class="section-title">Все команды</h2>
       <div class="teams-grid">
-        <div v-for="team in teams" :key="team.id" class="team-card" :class="{ 'user-team': userTeam && team.id === userTeam.id }">
+        <div v-for="team in teams" :key="team.id" class="team-card" @click="goToTeamDetails(team.id)" :class="{ 'user-team': userTeam && team.id === userTeam.id }">
           <div class="team-content">
             <h3 class="team-name">{{ team.name }}</h3>
             <div class="team-status">
@@ -63,7 +57,6 @@
                 <div v-for="member in team.members" :key="member.id" class="member-item">
                   <i class="fas fa-user"></i>
                   <span class="member-name">{{ member.name }}</span>
-                  <span class="member-email">{{ member.email }}</span>
                   <span v-if="member.id === team.captain_id" class="captain-badge">
                     <i class="fas fa-crown"></i> Капитан
                   </span>
@@ -82,7 +75,9 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router';
 
+const router = useRouter();
 const teams = ref([])
 const userTeam = ref(null)
 
@@ -103,7 +98,9 @@ const fetchTeams = async () => {
     teams.value = []
   }
 }
-
+const goToTeamDetails = (teamId) => {
+  router.push(`/team/${teamId}`);
+};
 // Загрузка участников команды
 const loadTeamMembers = async (teamId) => {
   try {
@@ -218,6 +215,7 @@ onMounted(async () => {
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 20px;
   padding: 20px 0;
+  cursor: pointer;
 }
 
 .team-card {

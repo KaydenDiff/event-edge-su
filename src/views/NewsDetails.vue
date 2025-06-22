@@ -75,7 +75,18 @@
           <p>{{ news.description }}</p>
         </div>
         
-        <div class="article-body" v-html="news.content"></div>
+<div
+  class="article-body"
+  :class="{ collapsed: !isExpanded }"
+  v-html="news.content"
+></div>
+
+<button
+  @click="isExpanded = !isExpanded"
+  class="btn btn-expand"
+>
+  {{ isExpanded ? 'Скрыть' : 'Читать далее' }}
+</button>
       </div>
       
       <!-- Футер статьи -->
@@ -130,7 +141,9 @@ const router = useRouter();
 const news = ref(null);
 const loading = ref(true);
 const error = ref(null);
-
+const isExpanded = ref(false);
+const contentBeforeMore = ref('');
+const contentAfterMore = ref('');
 const fetchNewsDetails = async () => {
   const { slug } = route.params;
   
@@ -147,6 +160,16 @@ const fetchNewsDetails = async () => {
   try {
     const response = await getNewsById(slug);
     news.value = response;
+    const rawContent = response.content || '';
+const moreTag = '<!--more-->';
+if (rawContent.includes(moreTag)) {
+  const [before, after] = rawContent.split(moreTag);
+  contentBeforeMore.value = before;
+  contentAfterMore.value = after;
+} else {
+  contentBeforeMore.value = rawContent;
+  contentAfterMore.value = '';
+}
     updateMetaTags();
   } catch (err) {
     console.error('Ошибка при загрузке новости:', err);
@@ -407,7 +430,26 @@ onMounted(fetchNewsDetails);
 .article-body :deep(li) {
   margin-bottom: 0.5rem;
 }
+.article-body.collapsed {
+  max-height: 200px; /* можно подстроить под нужную высоту */
+  overflow: hidden;
+  position: relative;
+  mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+}
 
+.btn-expand {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background-color: #8B5CF6;
+  border: none;
+  color: white;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+.btn-expand:hover {
+  background-color: #5c20e7;
+}
 .article-footer {
   padding: 1.5rem 2rem;
   border-top: 1px solid #444;

@@ -211,133 +211,134 @@ export default {
   
 <style scoped>
 .edit-profile-container {
-  max-width: 600px;
-  margin: 100px auto;
-  padding: 40px;
-  background: linear-gradient(145deg, #2D2D2D, #1a1a1a);
-  border-radius: 16px;
+
+  max-width: 800px; /* Увеличьте ширину для соответствия профилю */
+  margin: 100px auto; /* Отступ сверху */
+  padding: 30px; /* Уменьшите отступы для более компактного вида */
+  background: linear-gradient(145deg, #2c2c2c, #1a1a1a); /* Градиентный фон */
+  border-radius: 15px; /* Увеличьте радиус скругления */
   text-align: center;
   color: #fff;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(205, 170, 81, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); /* Тень для глубины */
+  border: 1px solid rgba(182, 0, 254, 0.1); /* Лёгкая рамка */
 }
 
 .title {
-  font-size: 2.2rem;
-  color: #630181;
-  margin-bottom: 30px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  font-size: 2.2rem; /* Размер заголовка */
+  color: #630181; /* Цвет заголовка */
+  margin-bottom: 30px; /* Отступ снизу */
+  font-weight: 600; /* Жирный шрифт */
+  letter-spacing: 1px; /* Расстояние между буквами */
 }
 
 form {
   display: flex;
-  flex-direction: column;
-  gap: 20px;
+  flex-direction: column; /* Вертикальное расположение элементов */
+  gap: 20px; /* Промежутки между элементами */
 }
 
 label {
-  text-align: left;
-  font-size: 1.1rem;
-  color: #630181;
-  margin-bottom: 8px;
-  display: block;
+  text-align: left; /* Выравнивание текста */
+  font-size: 1.1rem; /* Размер шрифта */
+  color: #630181; /* Цвет текста */
+  margin-bottom: 8px; /* Отступ снизу */
+  display: block; /* Блочный элемент */
 }
 
 input {
-  width: 100%;
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(184, 81, 205, 0.2);
-  background-color: rgba(51, 51, 51, 0.8);
-  color: #fff;
-  font-size: 1rem;
-  transition: all 0.3s ease;
+  width: 100%; /* Ширина 100% */
+  padding: 12px; /* Отступы внутри поля */
+  border-radius: 8px; /* Скругление углов */
+  border: 1px solid rgba(184, 81, 205, 0.2); /* Рамка */
+  background-color: rgba(51, 51, 51, 0.8); /* Фон */
+  color: #fff; /* Цвет текста */
+  font-size: 1rem; /* Размер шрифта */
+  transition: all 0.3s ease; /* Плавный переход */
 }
 
 input:focus {
-  outline: none;
-  border-color: #630181;
-  box-shadow: 0 0 10px rgba(205, 170, 81, 0.2);
+  outline: none; /* Убираем обводку */
+  border-color: #630181; /* Цвет рамки при фокусе */
+  box-shadow: 0 0 10px rgba(205, 170, 81, 0.2); /* Тень при фокусе */
 }
 
 .input-error {
-  color: #ff6b6b;
-  font-size: 0.9rem;
-  margin-top: 5px;
-  text-align: left;
+  color: #ff6b6b; /* Цвет ошибок */
+  font-size: 0.9rem; /* Размер шрифта для ошибок */
+  margin-top: 5px; /* Отступ сверху */
+  text-align: left; /* Выравнивание текста */
 }
 
 .avatar-preview {
-  margin: 20px 0;
+  margin: 20px 0; /* Отступы сверху и снизу */
 }
 
 .avatar-preview img {
-  max-width: 200px;
-  max-height: 200px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 3px solid #630181;
-  box-shadow: 0 5px 15px rgba(205, 170, 81, 0.2);
+  max-width: 200px; /* Максимальная ширина */
+  max-height: 200px; /* Максимальная высота */
+  border-radius: 50%; /* Круглая форма */
+  object-fit: cover; /* Обтекание изображения */
+  border: 3px solid #630181; /* Рамка */
+  box-shadow: 0 5px 15px rgba(205, 170, 81, 0.2); /* Тень */
 }
 
 .details-button {
-  padding: 12px 25px;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 1.1rem;
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin: 10px 0;
+  padding: 10px 20px; /* Уменьшите отступы для компактного вида */
+  border-radius: 8px; /* Скругление углов */
+  font-weight: 600; /* Жирный шрифт */
+  font-size: 1rem; /* Размер шрифта */
+  border: none; /* Убираем рамку */
+  cursor: pointer; /* Указатель при наведении */
+  transition: all 0.3s ease; /* Плавный переход */
+  text-transform: uppercase; /* Верхний регистр */
+  letter-spacing: 1px; /* Расстояние между буквами */
+  margin: 10px 0; /* Отступы */
+  background: linear-gradient(45deg, #630181, #9500ff); /* Градиентный фон */
+  color: #fff; /* Цвет текста */
 }
 
 .details-button:hover {
-  
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(205, 170, 81, 0.3);
+  transform: translateY(-2px); /* Подъём при наведении */
+  box-shadow: 0 5px 15px rgba(205, 170, 81, 0.3); /* Тень при наведении */
 }
 
 .success-message {
-  color: #4CAF50;
-  margin-top: 20px;
-  padding: 15px;
-  background: rgba(76, 175, 80, 0.1);
-  border-radius: 8px;
-  font-weight: 500;
+  color: #4CAF50; /* Цвет успеха */
+  margin-top: 20px; /* Отступ сверху */
+  padding: 15px; /* Отступы */
+  background: rgba(76, 175, 80, 0.1); /* Фон успеха */
+  border-radius: 8px; /* Скругление углов */
+  font-weight: 500; /* Жирный шрифт */
 }
 
 .error-message {
-  color: #ff6b6b;
-  margin-top: 20px;
-  padding: 15px;
-  background: rgba(255, 107, 107, 0.1);
-  border-radius: 8px;
-  font-weight: 500;
+  color: #ff6b6b; /* Цвет ошибки */
+  margin-top: 20px; /* Отступ сверху */
+  padding: 15px; /* Отступы */
+  background: rgba(255, 107, 107, 0.1); /* Фон ошибки */
+  border-radius: 8px; /* Скругление углов */
+  font-weight: 500; /* Жирный шрифт */
 }
 
 .loading {
-  color: #630181;
-  font-size: 1.2rem;
-  margin: 20px 0;
+  color: #630181; /* Цвет загрузки */
+  font-size: 1.2rem; /* Размер шрифта */
+  margin: 20px 0; /* Отступы */
 }
 
 @media (max-width: 768px) {
   .edit-profile-container {
-    margin: 40px 20px;
-    padding: 20px;
+    margin: 40px 20px; /* Отступы для мобильных */
+    padding: 20px; /* Отступы для мобильных */
   }
 
   .title {
-    font-size: 1.8rem;
+    font-size: 1.8rem; /* Размер заголовка для мобильных */
   }
 
   .details-button {
-    padding: 10px 20px;
-    font-size: 1rem;
+    padding: 10px 20px; /* Отступы для мобильных */
+    font-size: 1rem; /* Размер шрифта для мобильных */
   }
 }
 </style>

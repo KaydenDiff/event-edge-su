@@ -3,7 +3,7 @@ import { RouterView, useRoute } from 'vue-router'
 import Header from "@/components/Header.vue";
 import Bar from "@/components/Bar.vue";
 import { computed, ref, provide } from 'vue';
-
+import NotificationButton from './components/NotificationButton.vue';
 const route = useRoute();
 
 // Определяем, на каких страницах показывать секцию с играми
@@ -58,6 +58,7 @@ const handleMenuSelected = (section) => {
       @menu-selected="handleMenuSelected"
     />
     <RouterView :selected-menu="selectedMenu" />
+    <NotificationButton />
   </div>
 </template>
 

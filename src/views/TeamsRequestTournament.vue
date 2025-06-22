@@ -89,13 +89,13 @@
   
   <style scoped>
   .tournament-requests {
+ 
     min-height: 100vh;
     color: #f5f5f5;
     padding: 20px;
     max-width: 1200px;
-    margin: 0 auto;
+    margin: 100px auto;
   }
-  
   h1 {
     font-size: 2rem;
     color: #f5f5f5;

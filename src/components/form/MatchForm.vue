@@ -20,25 +20,29 @@
       </div>
 
       <div class="form-group">
-        <label>Команда 1:</label>
-        <select v-if="isCreate" v-model="formData.team_1_id" :class="{ 'error-input': validationErrors.team_1_id }">
+    <label>Команда 1:</label>
+    <select v-if="isCreate" v-model="formData.team_1_id" :class="{ 'error-input': validationErrors.team_1_id }">
           <option disabled value="">Выберите команду</option>
-          <option v-for="team in filteredTeams" :key="team.id" :value="team.id">{{ team.name }}</option>
+          <option v-for="team in teams" :key="team.id" :value="team.id">
+            {{ team.name }} <!-- Используем имя команды -->
+          </option>
         </select>
-        <div v-else class="team-display">{{ formData.team_1_name }}</div>
-        <div v-if="validationErrors.team_1_id" class="error-text">{{ validationErrors.team_1_id }}</div>
-      </div>
+    <div v-else class="team-display">{{ formData.team_1_name }}</div>
+    <div v-if="validationErrors.team_1_id" class="error-text">{{ validationErrors.team_1_id }}</div>
+  </div>
 
-      <div class="form-group">
+  <div class="form-group">
         <label>Команда 2:</label>
         <select v-if="isCreate" v-model="formData.team_2_id" :class="{ 'error-input': validationErrors.team_2_id }">
           <option disabled value="">Выберите команду</option>
-          <option v-for="team in filteredTeams" :key="team.id" :value="team.id">{{ team.name }}</option>
+          <option v-for="team in teams" :key="team.id" :value="team.id" 
+                  :disabled="team.id === formData.team_1_id">
+            {{ team.name }} <!-- Используем имя команды -->
+          </option>
         </select>
-        <div v-else class="team-display">{{ formData.team_2_name }}</div>
-        <div v-if="validationErrors.team_2_id" class="error-text">{{ validationErrors.team_2_id }}</div>
-      </div>
-
+    <div v-else class="team-display">{{ formData.team_2_name }}</div>
+    <div v-if="validationErrors.team_2_id" class="error-text">{{ validationErrors.team_2_id }}</div>
+  </div>
       <div class="form-group">
         <label>Дата матча:</label>
         <input type="datetime-local" v-model="formData.match_date" :class="{ 'error-input': validationErrors.match_date }" />
@@ -109,6 +113,10 @@ export default {
       type: [Number, String],
       default: null
     },
+    teams: { 
+      type: Array,
+      required: true
+    },
     isCreate: {
       type: Boolean,
       default: true
@@ -133,16 +141,73 @@ export default {
       winner_team_id: null,
       result: ''
     })
+    const validateForm = () => {
+      validationErrors.value = {}
+      
+      if (!formData.value.tournament_id) {
+        validationErrors.value.tournament_id = 'Выберите турнир'
+      }
+      
+      if (!formData.value.match_date) {
+        validationErrors.value.match_date = 'Укажите дату матча'
+      }
+      
+      if (!formData.value.stage_id) {
+        validationErrors.value.stage_id = 'Выберите стадию'
+      }
+      
+      if (props.isCreate) {
+        if (!formData.value.team_1_id) {
+          validationErrors.value.team_1_id = 'Выберите первую команду'
+        }
+        
+        if (!formData.value.team_2_id) {
+          validationErrors.value.team_2_id = 'Выберите вторую команду'
+        }
 
+        // Проверка на уникальность команд
+        if (formData.value.team_1_id && formData.value.team_2_id && 
+            formData.value.team_1_id === formData.value.team_2_id) {
+          validationErrors.value.team_2_id = 'Команды должны быть разными'
+        }
+      }
+      
+      if (formData.value.status === 'completed') {
+        if (!formData.value.result) {
+          validationErrors.value.result = 'Укажите результат матча'
+        }
+        
+        if (!formData.value.winner_team_id) {
+          validationErrors.value.winner_team_id = 'Выберите победителя'
+        }
+      }
+      
+      return Object.keys(validationErrors.value).length === 0
+    }
     const tournaments = ref([])
     const teams = ref([])
     const stages = ref([])
+const activeTeams = computed(() => {
+  return teams.value.filter(team => team.status === 'active')
+})
+const getTeamById = (teamId) => {
+  return teams.value.find(team => team.id === Number(teamId)) || null;
+};
 
+const updateTeamName = (teamField) => {
+  const teamId = formData.value[`${teamField}_id`];
+  const team = getTeamById(teamId);
+  if (team) {
+    formData.value[`${teamField}_name`] = team.name;
+  } else {
+    formData.value[`${teamField}_name`] = '';
+  }
+};
     // Загрузка списка команд, связанных с выбранным турниром
-    const filteredTeams = computed(() => {
-      if (!formData.value.tournament_id) return []
-      return teams.value.filter(team => team.tournament_id === formData.value.tournament_id)
-    })
+ const filteredTeams = computed(() => {
+     if (!formData.value.tournament_id) return []
+     return teams.value.filter(team => team.tournament_id === formData.value.tournament_id)
+   })
 
     // Следим за изменением турнира для подгрузки связанных команд
     watch(() => formData.value.tournament_id, async (newVal) => {
@@ -170,58 +235,76 @@ export default {
     }
 
     const fetchTeamsForTournament = async (tournamentId) => {
-      try {
-        const user = JSON.parse(localStorage.getItem('user'))
-        const response = await axios.get(`http://event-edge-su/api/guest/tournaments/${tournamentId}/teams`, {
-          headers: {
-            'Authorization': `Bearer ${user?.token || ''}`
-          }
-        })
-        
-        if (response.data && response.data.teams) {
-          teams.value = response.data.teams
+  try {
+    loading.value = true
+    const user = JSON.parse(localStorage.getItem('user'))
+    const response = await axios.get(
+      `http://event-edge-su/api/guest/tournaments/${tournamentId}/teams`,
+      {
+        headers: {
+          Authorization: `Bearer ${user?.token || ''}`
         }
-      } catch (err) {
-        console.error('Ошибка загрузки команд:', err)
       }
-    }
+    )
 
-    const fetchMatchData = async () => {
-      if (!props.matchId || props.isCreate) return
-      
-      try {
-        loading.value = true
-        error.value = null
-        validationErrors.value = {}
-        
-        const response = await axios.get(`http://event-edge-su/api/guest/game-matches/${props.matchId}`)
-        const matchData = response.data
-        
-        // Format date for datetime-local input
-        const date = new Date(matchData.match_date)
-        const formattedDate = date.toISOString().slice(0, 16)
-        
-        // Ensure we have all required fields and convert IDs to numbers
-        formData.value = {
-          tournament_id: Number(matchData.tournament_id),
-          team_1_id: Number(matchData.team_1_id),
-          team_2_id: Number(matchData.team_2_id),
-          team_1_name: matchData.team_1_name,
-          team_2_name: matchData.team_2_name,
-          match_date: formattedDate,
-          stage_id: Number(matchData.stage_id),
-          stage_name: matchData.stage_name,
-          status: matchData.status,
-          winner_team_id: matchData.winner_team_id ? Number(matchData.winner_team_id) : null,
-          result: matchData.result || ''
-        }
-      } catch (err) {
-        console.error('Ошибка загрузки данных матча:', err)
-        error.value = 'Ошибка при загрузке данных матча: ' + (err.response?.data?.message || err.message)
-      } finally {
-        loading.value = false
-      }
+    if (response.data?.teams) {
+      teams.value = response.data.teams.map(team => ({
+        id: team.id,
+        name: team.name,
+        captain_id: team.captain_id,
+        status: team.status,
+        created_at: team.created_at,
+        updated_at: team.updated_at,
+        tournament_id: tournamentId // добавляем tournament_id для фильтрации
+      }))
+    } else {
+      teams.value = []
     }
+  } catch (err) {
+    console.error('Ошибка загрузки команд:', err)
+    error.value = 'Не удалось загрузить список команд'
+    teams.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+const fetchMatchData = async () => {
+  if (!props.matchId || props.isCreate) return;
+  
+  try {
+    loading.value = true
+    error.value = null
+    validationErrors.value = {}
+    
+    const response = await axios.get(`http://event-edge-su/api/guest/game-matches/${props.matchId}`)
+    const matchData = response.data
+    
+    // Format date for datetime-local input
+    const date = new Date(matchData.match_date)
+    const formattedDate = date.toISOString().slice(0, 16)
+    
+    // Устанавливаем данные, включая имена команд
+    formData.value = {
+      tournament_id: Number(matchData.tournament_id),
+      team_1_id: Number(matchData.team_1_id),
+      team_2_id: Number(matchData.team_2_id),
+      team_1_name: matchData.team_1_name || getTeamById(matchData.team_1_id)?.name || '',
+      team_2_name: matchData.team_2_name || getTeamById(matchData.team_2_id)?.name || '',
+      match_date: formattedDate,
+      stage_id: Number(matchData.stage_id),
+      stage_name: matchData.stage_name,
+      status: matchData.status,
+      winner_team_id: matchData.winner_team_id ? Number(matchData.winner_team_id) : null,
+      result: matchData.result || ''
+    }
+  } catch (err) {
+    console.error('Ошибка загрузки данных матча:', err)
+    error.value = 'Ошибка при загрузке данных матча: ' + (err.response?.data?.message || err.message)
+  } finally {
+    loading.value = false
+  }
+}
 
     const fetchAllData = async () => {
       try {
@@ -249,48 +332,7 @@ export default {
       }
     }
 
-    const validateForm = () => {
-      validationErrors.value = {}
-      
-      if (!formData.value.tournament_id) {
-        validationErrors.value.tournament_id = 'Выберите турнир'
-      }
-      
-      if (!formData.value.match_date) {
-        validationErrors.value.match_date = 'Укажите дату матча'
-      }
-      
-      if (!formData.value.stage_id) {
-        validationErrors.value.stage_id = 'Выберите стадию'
-      }
-      
-      if (props.isCreate) {
-        if (!formData.value.team_1_id) {
-          validationErrors.value.team_1_id = 'Выберите первую команду'
-        }
-        
-        if (!formData.value.team_2_id) {
-          validationErrors.value.team_2_id = 'Выберите вторую команду'
-        }
-        
-        if (formData.value.team_1_id && formData.value.team_2_id && 
-            formData.value.team_1_id === formData.value.team_2_id) {
-          validationErrors.value.team_2_id = 'Команды должны быть разными'
-        }
-      }
-      
-      if (formData.value.status === 'completed') {
-        if (!formData.value.result) {
-          validationErrors.value.result = 'Укажите результат матча'
-        }
-        
-        if (!formData.value.winner_team_id) {
-          validationErrors.value.winner_team_id = 'Выберите победителя'
-        }
-      }
-      
-      return Object.keys(validationErrors.value).length === 0
-    }
+   
 
     const submitForm = async () => {
       if (!validateForm()) return

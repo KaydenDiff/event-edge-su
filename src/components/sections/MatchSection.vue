@@ -5,13 +5,13 @@
       </BaseButton>
   
       <div v-if="showCreateMatchForm" class="form-container">
-        <MatchForm 
-          :isCreate="true" 
-          @submit-success="handleMatchCreated" 
-          @cancel="showCreateMatchForm = false"
-        />
-      </div>
-
+      <MatchForm 
+        :isCreate="true" 
+        :teams="teams" 
+        @submit-success="handleMatchCreated" 
+        @cancel="showCreateMatchForm = false"
+      />
+    </div>
       <div v-if="showEditMatchForm" class="form-container">
         <h3>Редактирование матча</h3>
         <MatchForm 
@@ -70,6 +70,7 @@
           await Promise.all([
             this.fetchTournaments(),
             this.fetchStages(),
+            this.fetchTeams(),
             this.fetchMatches()
           ]);
           
@@ -78,6 +79,15 @@
           console.error('Ошибка при загрузке данных:', error);
         }
       },
+      async fetchTeams() {
+  try {
+    const res = await fetch('http://event-edge-su/api/guest/teams');
+    const result = await res.json(); // Предположим, что это объект с сообщением и массивом
+    this.teams = result.data; // Извлекаем массив команд из объекта
+  } catch (e) {
+    console.error('Ошибка загрузки команд:', e);
+  }
+},
       async fetchTournaments() {
         try {
           const res = await fetch('http://event-edge-su/api/guest/tournaments');

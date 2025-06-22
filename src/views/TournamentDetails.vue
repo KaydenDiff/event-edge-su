@@ -5,45 +5,69 @@
     <div v-if="loading" class="loading">Загрузка...</div>
     <div v-else-if="error" class="error">{{ error }}</div>
     <div v-else>
-      <div class="info-card">
-        <p><strong>Описание:</strong> {{ tournament.description }}</p>
-        <p><strong>Дата начала:</strong> {{ formatDate(tournament.start_date) }}</p>
-        <p><strong>Дата окончания:</strong> {{ formatDate(tournament.end_date) }}</p>
-        <p><strong>Просмотры:</strong> {{ tournament.views_count }}</p>
-        <p class="organizer-name">
-          <strong>Организатор:</strong> {{ tournament.organizer?.name || tournament.organizer }}
-        </p>
-        <p><strong>Игра:</strong> {{ tournament.game?.name || "Не указано" }}</p>
-        <p><strong>Стадия:</strong> {{ tournament.stage?.name || "Не указано" }}</p>
-      </div>
-
+      <div class="info-card enhanced-info-card">
+  <div class="info-row">
+    <span class="icon">📝</span>
+    <p><strong>Описание:</strong> {{ tournament.description }}</p>
+  </div>
+  <div class="info-row">
+    <span class="icon">📅</span>
+    <p><strong>Дата начала:</strong> {{ formatDate(tournament.start_date) }}</p>
+  </div>
+  <div class="info-row">
+    <span class="icon">📅</span>
+    <p><strong>Дата окончания:</strong> {{ formatDate(tournament.end_date) }}</p>
+  </div>
+  <div class="info-row">
+    <span class="icon">👁️</span>
+    <p><strong>Просмотры:</strong> {{ tournament.views_count }}</p>
+  </div>
+  <div class="info-row">
+    <span class="icon">👤</span>
+    <p><strong>Организатор:</strong> {{ tournament.organizer?.name || tournament.organizer }}</p>
+  </div>
+  <div class="info-row">
+    <span class="icon">🎮</span>
+    <p><strong>Игра:</strong> {{ tournament.game?.name || "Не указано" }}</p>
+  </div>
+  <div class="info-row">
+    <span class="icon">🏁</span>
+    <p><strong>Стадия:</strong> {{ tournament.stage?.name || "Не указано" }}</p>
+  </div>
+</div>
       <!-- Секция с командами-участниками -->
-      <div class="teams-section">
-        <h2>Команды-участники</h2>
-        <div v-if="loadingTeams" class="loading">Загрузка списка команд...</div>
-        <div v-else-if="teamsError" class="error">{{ teamsError }}</div>
-        <div v-else>
-          <div v-if="teams.length > 0" class="teams-list">
-            <div v-for="team in teams" :key="team.id" class="team-card">
-              <div class="team-info">
-                <h3>{{ team.name }}</h3>
-                <p><strong>Статус:</strong> {{ getStatusText(team.status) }}</p>
-                <p><strong>Капитан:</strong> ID {{ team.captain_id }}</p>
-              </div>
-              <router-link 
-                v-if="isOrganizer"
-                :to="`/team/${team.id}`" 
-                class="details-button"
-              >
-                Подробнее
-              </router-link>
-            </div>
-          </div>
-          <div v-else class="no-teams">
-            В турнире пока нет зарегистрированных команд
-          </div>
+      <div class="teams-section enhanced-teams-section">
+  <h2>Команды-участники</h2>
+  <div v-if="loadingTeams" class="loading">Загрузка списка команд...</div>
+  <div v-else-if="teamsError" class="error">{{ teamsError }}</div>
+  <div v-else>
+    <div v-if="teams.length > 0" class="teams-list">
+      <div v-for="team in teams" :key="team.id" class="team-card enhanced-team-card">
+        <div class="team-info">
+          <h3>
+            <span class="icon">🛡️</span>
+            {{ team.name }}
+          </h3>
+          <p class="team-status">
+            <span class="icon">📌</span>
+            <strong>Статус:</strong> 
+            <span :class="['status-label', team.status]">{{ getStatusText(team.status) }}</span>
+          </p>
         </div>
+        <router-link 
+          v-if="isOrganizer"
+          :to="`/team/${team.id}`" 
+          class="details-button team-details-button"
+        >
+          Подробнее
+        </router-link>
       </div>
+    </div>
+    <div v-else class="no-teams">
+      В турнире пока нет зарегистрированных команд
+    </div>
+  </div>
+</div>
 
       <TournamentBracket :tournamentId="tournament.id" />
       
@@ -171,8 +195,9 @@ watch(
 .title {
   font-size: 26px;
   margin-bottom: 15px;
-  color: #ffffff;
+  color: #630181; /* Фиолетовый цвет для заголовка */
 }
+
 
 .info-card {
   background: #2c2c2c;
@@ -180,8 +205,8 @@ watch(
   border-radius: 8px;
   text-align: left;
   margin-bottom: 20px;
+  border: 1px solid #630181; /* Фиолетовая рамка для карточки информации */
 }
-
 .teams-section {
   margin-top: 30px;
   background: #2c2c2c;
@@ -193,7 +218,9 @@ watch(
   font-size: 22px;
   margin-bottom: 15px;
   text-align: center;
+  color: #630181; /* Фиолетовый цвет для заголовка секции команд */
 }
+
 
 .teams-list {
   display: grid;
@@ -207,11 +234,15 @@ watch(
   padding: 15px;
   background: #3a3a3a;
   border-radius: 8px;
+  border: 1px solid #630181; /* Фиолетовая рамка для карточки команды */
 }
 
 .team-info h3 {
   margin: 0 0 5px 0;
   color: #fff;
+}
+.team-info p strong {
+  color: #630181;
 }
 
 .team-info p {
@@ -234,10 +265,126 @@ watch(
   border-radius: 8px;
   text-decoration: none;
   display: inline-block;
+  background-color: #630181; /* Фиолетовый фон для кнопки */
+  color: #fff; /* Белый текст на кнопке */
 }
+.details-button:hover {
+  background-color: #7a2b9c; /* Более светлый фиолетовый при наведении */
+}
+
 .tournament-ended {
   font-size: 18px;
   font-weight: bold;
-  color: #ff6347;
+  color: #ff6347; /* Цвет для завершенного турнира */
+}
+.enhanced-info-card {
+  background: #2c2c2c;
+  padding: 20px 25px;
+  border-radius: 10px;
+  border: 1px solid #630181;
+  box-shadow: 0 0 12px rgba(99, 1, 129, 0.3);
+}
+
+.info-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.info-row .icon {
+  font-size: 20px;
+  color: #a35ad7;
+  min-width: 24px;
+  text-align: center;
+  margin-top: 2px;
+}
+
+.info-row p {
+  margin: 0;
+  color: #ddd;
+  line-height: 1.5;
+}
+
+.info-row strong {
+  color: #fff;
+}
+.enhanced-teams-section {
+  background: #2c2c2c;
+  padding: 25px;
+  border-radius: 10px;
+  border: 1px solid #630181;
+  box-shadow: 0 0 12px rgba(99, 1, 129, 0.3);
+}
+
+.enhanced-team-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #3a3a3a;
+  padding: 18px 20px;
+  border-radius: 10px;
+  border: 1px solid #630181;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.enhanced-team-card:hover {
+  transform: scale(1.01);
+  box-shadow: 0 0 12px rgba(99, 1, 129, 0.4);
+}
+
+.team-info h3 {
+  margin: 0 0 5px;
+  font-size: 20px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+}
+
+.team-info .icon {
+  font-size: 18px;
+  color: #a35ad7;
+}
+
+.team-status {
+  margin: 0;
+  color: #ccc;
+  display: flex;
+  align-items: center;
+}
+
+.status-label {
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-left: 6px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.status-label.accepted {
+  background-color: #2e8b57;
+  color: #fff;
+}
+
+.status-label.pending {
+  background-color: #c29300;
+  color: #fff;
+}
+
+.status-label.rejected {
+  background-color: #b22222;
+  color: #fff;
+}
+
+.team-details-button {
+  font-size: 14px;
+  background-color: #630181;
+  color: #fff;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.team-details-button:hover {
+  background-color: #7a2b9c;
 }
 </style>

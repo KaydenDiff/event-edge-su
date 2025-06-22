@@ -69,6 +69,7 @@
 
 export default {
   name: 'MatchCard',
+  emits: ['match-added', 'match-deleted', 'edit-match'],
   props: {
     match: Object,
     tournamentName: {

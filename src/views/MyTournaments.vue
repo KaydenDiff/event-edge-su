@@ -24,7 +24,7 @@
               <h3>{{ tournament.name }}</h3>
               <router-link 
   :to="`/tournament/${tournament.id}/requests`" 
-  class="details-button"
+  class="details-btn"
 >
   Заявки
 </router-link>
@@ -34,6 +34,7 @@
             <p><strong>Дата окончания:</strong> {{ tournament.end_date }}</p>
             <p><strong>Статус:</strong> {{ tournament.status_name }}</p>
             <p><strong>Просмотры:</strong> {{ tournament.views_count }}</p>
+           
           </div>
         </div>
         <p v-else class="no-tournaments">
@@ -52,8 +53,8 @@
             <div class="tournament-header">
               <h3>{{ tournament.name }}</h3>
               <router-link 
-                :to="`/tournament-details/${tournament.id}`" 
-                class="details-button"
+                :to="`/tournaments/${tournament.id}`" 
+                class="details-btn"
               >
                 Подробнее
               </router-link>
@@ -201,13 +202,35 @@ export default {
 
 .tournament-card {
   padding: 15px;
-  background: #630181;
+  background: #2a2a2a;
   border-radius: 8px;
   text-align: left;
 }
+.tournament-header {
+  display: flex; /* Используем Flexbox для выравнивания */
+  justify-content: space-between; /* Распределяем пространство между элементами */
+  align-items: center; /* Выравниваем по центру по вертикали */
+}
+.details-btn {
+  margin-left: 15px;
+  padding: 12px 20px; /* Уменьшил отступы для более компактного вида */
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  cursor: pointer; 
+  background: #630181; /* Градиентный фон */
+  color: white;
+  border: none; /* Убираем рамку */
+  box-shadow: 0 4px 15px rgba(93, 20, 161, 0.3); /* Тень для глубины */
+  font-weight: bold; /* Жирный шрифт для акцента */
+}
 
+.details-btn:hover {
+  transform: translateY(-2px); /* Поднимаем кнопку при наведении */
+  box-shadow: 0 6px 20px rgba(164, 92, 246, 0.5); /* Увеличиваем тень при наведении */
+  background: #630181; /* Меняем градиент при наведении */
+}
 .completed {
-  border-left: 5px solid #27ae60;
+  border-left: 5px solid #630181;
 }
 
 .tournament-card h3 {
@@ -237,6 +260,7 @@ export default {
 }
 
 .cta-button:hover {
-  background-color: #d94500;
+  background-color: #ffffff;
+  color: #000000;
 }
 </style>

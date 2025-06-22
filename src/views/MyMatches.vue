@@ -150,7 +150,6 @@ export default {
   max-width: 800px;
   margin: 20px auto;
   padding: 20px;
-  background: #000000;
   border-radius: 8px;
   box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
   text-align: center;
@@ -195,13 +194,13 @@ export default {
 
 .match-card {
   padding: 15px;
-  background: #630181;
+  background: #2a2a2a;
   border-radius: 8px;
   text-align: left;
 }
 
 .completed {
-  border-left: 5px solid #27ae60;
+  border-left: 5px solid #630181;
 }
 
 .match-card h3 {
@@ -215,7 +214,7 @@ export default {
 
 .winner {
   font-weight: bold;
-  color: #27ae60;
+  color: #630181;
 }
 
 .no-matches {
@@ -227,8 +226,8 @@ export default {
   display: inline-block;
   margin-top: 10px;
   padding: 10px 20px;
-  background-color: #630181;
-  color: white;
+  background-color: #ffffff;
+  color: rgb(0, 0, 0);
   border-radius: 5px;
   text-decoration: none;
   font-weight: bold;
@@ -236,7 +235,8 @@ export default {
 }
 
 .join-button:hover {
-  background-color: #ff6a1a;
+  background-color: #630181;
+  color: #ffffff;
 }
 
 .no-matches {

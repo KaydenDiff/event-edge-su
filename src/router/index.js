@@ -28,12 +28,13 @@ import NotificationsPage from '@/views/Notifications.vue'
 import NewsFeeds from '@/views/NewsFeeds.vue';
 import TeamsRequestTournament from '@/views/TeamsRequestTournament.vue';
 import NewsDetails from '@/views/NewsDetails.vue';
-
+import TeamDetails from '@/views/TeamDetails.vue'
+import CreateTeamPage from '@/views/CreateTeamPage.vue';
 const routes = [
-  { path: '/', name: 'home', component: HomeView },
-  { path: '/help', name: 'help', component: HelpView },
-  { path: '/tournaments', component: Tournaments },
-  { path: '/teams', name: 'teams', component: Teams },
+  { path: '/', name: 'home', component: HomeView,  meta: { title: 'Главная' } },
+  { path: '/help', name: 'help', component: HelpView,meta: { title: 'Помощь' }  },
+  { path: '/tournaments', component: Tournaments,meta: { title: 'Список турниров' }  },
+  { path: '/teams', name: 'teams', component: Teams,meta: { title: 'Список команд' } },
   {
     path: '/tournaments/:id',
     name: 'TournamentDetails',
@@ -47,6 +48,18 @@ const routes = [
     props: true,
     meta: { requiresAuth: true }
   },
+  {
+    path: '/team/:id', 
+    name: 'TeamDetails',
+    component: TeamDetails
+  },
+ {
+  path: '/create-team/:userId',
+  name: 'CreateTeamPage',
+  component: CreateTeamPage,
+  props: true,
+  meta: { requiresAuth: true, title: 'Создание команды' }
+},
   {
     path: '/tournament/:id/requests',
     name: 'TeamsRequestTournament',
@@ -81,7 +94,8 @@ const routes = [
   { 
     path: '/profile', 
     component: Profile,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
+    meta: { title: 'Мой профиль' }
   },
   { 
     path: '/profile/:id',    
@@ -93,18 +107,21 @@ const routes = [
     path: '/edit-profile',
     name: 'EditProfile',
     component: EditProfilePage,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
+    meta: { title: 'Редактирование профиля' }
   },
   { 
     path: '/notifications', 
     component: NotificationsPage,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
+    meta: { title: 'Список уведомлений' }
   },
   {
     path: '/admin',
     name: 'AdminPanel',
     component: AdminPanel,
-    meta: { requiresAuth: true, requiresAdmin: true }
+    meta: { requiresAuth: true, requiresAdmin: true },
+    meta: { title: 'Функционал администратора' }
   },
   {
     path: '/organize-tournament',
@@ -116,7 +133,8 @@ const routes = [
   {
     path: '/news-feeds',
     name: 'NewsFeeds',
-    component: NewsFeeds
+    component: NewsFeeds,
+    meta: { title: 'Список новостей' }
   },
   {
     path: '/news/:slug',
@@ -129,7 +147,8 @@ const routes = [
     path: '/login',  
     name: 'login',
     component: Login,
-    meta: { requiresGuest: true }
+    meta: { requiresGuest: true },
+    meta: { title: 'Авторизация' }
   },
   { 
     path: '/register',
@@ -159,12 +178,15 @@ const routes = [
   {
     path: '/access-denied',
     name: 'access-denied',
-    component: AccessDenied
+    component: AccessDenied,
+    meta: { title: 'Доступ запрещен' }
+
   },
   {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
-    component: NotFound
+    component: NotFound,
+    meta: { title: 'Страница не найдена' }
   }
 ];
 
@@ -178,7 +200,7 @@ router.beforeEach((to, from, next) => {
   const userData = JSON.parse(localStorage.getItem('user') || '{}');
   const isAuthenticated = userData.token;
   const isAdmin = userData.role === 'Администратор';
-
+  document.title = to.meta.title || 'Event-Edge';
   // Проверка для страниц, требующих авторизации
   if (to.meta.requiresAuth && !isAuthenticated) {
     next({ name: 'login', query: { redirect: to.fullPath } });
