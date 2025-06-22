@@ -1,7 +1,7 @@
 <template>
   <div class="register-container">
     <h1 class="title">Регистрация на турнир "{{ form.tournament }}"</h1>
-    <div v-if="success" class="success-message">Вы успешно зарегистрировались!</div>
+    <div v-if="success" class="success-message">Запрос на регистрацию успешно отправлен!</div>
     <div v-else-if="loading" class="loading-message">Загрузка данных...</div>
     <div v-else-if="error" class="error-message">{{ error }}</div>
     <form v-else @submit.prevent="register">
