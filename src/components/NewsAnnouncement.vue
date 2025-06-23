@@ -10,7 +10,7 @@
       </div>
       <div class="download-buttons">
         <BaseButton
-          href="https://github.com/kaydenDiff/reactapp/releases"
+          href="https://github.com/KaydenDiff/Event-edge-mobile"
           target="_blank"
           customClass="github-button"
         >
